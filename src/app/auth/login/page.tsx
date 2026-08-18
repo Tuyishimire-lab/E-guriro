@@ -23,7 +23,18 @@ export default function LoginPage() {
       await login(email, password);
       router.push(searchParams.get('redirect') || '/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      // Map Firebase Auth error codes to friendly messages
+      const code = (err as { code?: string })?.code ?? '';
+      const messages: Record<string, string> = {
+        'auth/user-not-found':      'No account found with this email.',
+        'auth/wrong-password':      'Incorrect password. Please try again.',
+        'auth/invalid-credential':  'Incorrect email or password.',
+        'auth/invalid-email':       'Please enter a valid email address.',
+        'auth/too-many-requests':   'Too many failed attempts. Please try again later.',
+        'auth/user-disabled':       'This account has been suspended.',
+        'auth/network-request-failed': 'Network error. Check your connection.',
+      };
+      setError(messages[code] ?? (err instanceof Error ? err.message : 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }

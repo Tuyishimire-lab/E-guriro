@@ -30,7 +30,14 @@ export default function RegisterPage() {
       await register({ ...form, role });
       router.push(role === 'seller' ? '/seller/dashboard' : '/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      const code = (err as { code?: string })?.code ?? '';
+      const messages: Record<string, string> = {
+        'auth/email-already-in-use': 'An account with this email already exists.',
+        'auth/invalid-email':        'Please enter a valid email address.',
+        'auth/weak-password':        'Password must be at least 6 characters.',
+        'auth/network-request-failed': 'Network error. Check your connection.',
+      };
+      setError(messages[code] ?? (err instanceof Error ? err.message : 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }

@@ -1,64 +1,129 @@
 /**
- * Products Service
- *
- * Currently returns mock data from constants.ts
- * Firebase integration: replace each function body with Firestore calls.
- * Components that call these functions change ZERO lines.
+ * Products Service — Firestore
+ * All components that call these functions require ZERO changes.
  */
-
-import { MOCK_PRODUCTS } from '@/lib/constants';
+import {
+  collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+  query, where, orderBy, limit as fsLimit, serverTimestamp,
+  type QueryConstraint,
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 import type { Product } from '@/lib/types';
 
-/** Fetch all products, optionally filtered */
+const COL = 'products';
+
+// ── Helper: convert Firestore doc → Product ──────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toProduct(id: string, data: any): Product {
+  return {
+    id,
+    title:         data.title,
+    price:         data.price,
+    originalPrice: data.originalPrice,
+    image:         data.image ?? '',
+    images:        data.images ?? [],
+    rating:        data.rating ?? 0,
+    reviews:       data.reviews ?? 0,
+    seller:        data.seller ?? '',
+    sellerId:      data.sellerId ?? '',
+    category:      data.category ?? '',
+    brand:         data.brand ?? '',
+    badge:         data.badge,
+    stock:         data.stock ?? 0,
+    condition:     data.condition ?? 'new',
+    warranty:      data.warranty,
+    specs:         data.specs,
+    description:   data.description,
+    createdAt:     data.createdAt?.toDate?.()?.toISOString() ?? '',
+    status:        data.status ?? 'active',
+  };
+}
+
+// ── getProducts ───────────────────────────────────────────────────────────────
 export async function getProducts(filters?: {
   category?: string;
   sellerId?: string;
   search?: string;
   limit?: number;
 }): Promise<Product[]> {
-  let results = MOCK_PRODUCTS as Product[];
+  const constraints: QueryConstraint[] = [
+    where('status', '==', 'active'),
+    orderBy('createdAt', 'desc'),
+  ];
 
   if (filters?.category) {
-    results = results.filter(p => p.category === filters.category);
+    constraints.push(where('category', '==', filters.category));
   }
   if (filters?.sellerId) {
-    results = results.filter(p => p.sellerId === filters.sellerId);
-  }
-  if (filters?.search) {
-    const q = filters.search.toLowerCase();
-    results = results.filter(p =>
-      p.title.toLowerCase().includes(q) ||
-      p.category?.toLowerCase().includes(q)
-    );
+    constraints.push(where('sellerId', '==', filters.sellerId));
   }
   if (filters?.limit) {
-    results = results.slice(0, filters.limit);
+    constraints.push(fsLimit(filters.limit));
   }
 
-  return results;
+  const q = query(collection(db, COL), ...constraints);
+  const snap = await getDocs(q);
+  let products = snap.docs.map(d => toProduct(d.id, d.data()));
+
+  // Client-side search (Firestore doesn't support full-text natively)
+  if (filters?.search) {
+    const term = filters.search.toLowerCase();
+    products = products.filter(p =>
+      p.title.toLowerCase().includes(term) ||
+      p.brand?.toLowerCase().includes(term) ||
+      p.category?.toLowerCase().includes(term)
+    );
+  }
+
+  return products;
 }
 
-/** Fetch a single product by ID */
+// ── getProductById ────────────────────────────────────────────────────────────
 export async function getProductById(id: string): Promise<Product | null> {
-  return (MOCK_PRODUCTS as Product[]).find(p => p.id === id) ?? null;
+  const snap = await getDoc(doc(db, COL, id));
+  if (!snap.exists()) return null;
+  return toProduct(snap.id, snap.data());
 }
 
-/** Create a new product (placeholder — will write to Firestore) */
-export async function createProduct(data: Omit<Product, 'id' | 'createdAt'>): Promise<string> {
-  // TODO: doc(db, 'products', ...) write
-  const id = `prod_${Date.now()}`;
-  console.log('[DEV] createProduct:', { id, ...data });
-  return id;
+// ── createProduct ─────────────────────────────────────────────────────────────
+export async function createProduct(
+  data: Omit<Product, 'id' | 'createdAt'>,
+  imageFiles?: File[]
+): Promise<string> {
+  let imageUrl = data.image;
+  const imageUrls: string[] = [];
+
+  // Upload images to Firebase Storage if provided
+  if (imageFiles && imageFiles.length > 0) {
+    for (const file of imageFiles) {
+      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      const snap = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snap.ref);
+      imageUrls.push(url);
+    }
+    imageUrl = imageUrls[0];
+  }
+
+  const docRef = await addDoc(collection(db, COL), {
+    ...data,
+    image:     imageUrl,
+    images:    imageUrls.length > 0 ? imageUrls : (data.images ?? []),
+    rating:    0,
+    reviews:   0,
+    status:    'active',
+    createdAt: serverTimestamp(),
+  });
+
+  return docRef.id;
 }
 
-/** Update an existing product */
+// ── updateProduct ─────────────────────────────────────────────────────────────
 export async function updateProduct(id: string, data: Partial<Product>): Promise<void> {
-  // TODO: updateDoc(doc(db, 'products', id), data)
-  console.log('[DEV] updateProduct:', id, data);
+  await updateDoc(doc(db, COL, id), { ...data, updatedAt: serverTimestamp() });
 }
 
-/** Delete a product */
+// ── deleteProduct ─────────────────────────────────────────────────────────────
 export async function deleteProduct(id: string): Promise<void> {
-  // TODO: deleteDoc(doc(db, 'products', id))
-  console.log('[DEV] deleteProduct:', id);
+  await deleteDoc(doc(db, COL, id));
 }
