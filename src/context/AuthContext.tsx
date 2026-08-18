@@ -69,6 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // auth is null during SSR/build — skip listener
+    if (!auth) { setLoading(false); return; }
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const profile = await fetchProfile(firebaseUser);
@@ -90,16 +92,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
+    if (!auth) throw new Error('Auth not initialized');
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const profile = await fetchProfile(cred.user);
     if (profile) { setUser(profile); persistCookie(profile); }
   };
 
   const register = async (data: RegisterData) => {
+    if (!auth) throw new Error('Auth not initialized');
     const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
     await updateProfile(cred.user, { displayName: data.name });
 
-    // Write user + optional seller profile to Postgres via API route
     const res = await fetch('/api/users/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -121,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (!auth) return;
     await signOut(auth);
     setUser(null);
     persistCookie(null);
