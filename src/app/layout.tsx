@@ -4,6 +4,8 @@ import PublicShell from '@/components/PublicShell';
 import { CartProvider } from '@/context/CartContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { WishlistProvider } from '@/context/WishlistContext';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: "E-guriro | Rwanda's #1 Electronics & Phone Store",
@@ -33,6 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

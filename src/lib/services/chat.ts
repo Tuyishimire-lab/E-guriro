@@ -1,67 +1,67 @@
 /**
- * Chat Service — Firestore with real-time onSnapshot listeners
- *
- * Firestore structure:
- *   conversations/{convId}   — metadata
- *   conversations/{convId}/messages/{msgId}  — messages subcollection
+ * Chat Service — Neon Postgres with 3-second polling
+ * No Firestore dependency. Messages stored in Postgres.
+ * Real-time feel achieved via client-side polling every 3s.
  */
-import {
-  collection, doc, getDoc, getDocs, addDoc, updateDoc, setDoc,
-  query, where, orderBy, onSnapshot, serverTimestamp,
-  type Unsubscribe,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { sql } from '@/lib/db';
 
-// ── Types (local to this service) ────────────────────────────────────────────
 export interface ChatMessage {
   id: string;
+  conversationId: string;
   senderId: string;
   senderName: string;
   content: string;
   imageUrl?: string;
-  sentAt: Date;
+  sentAt: string;
   read: boolean;
 }
 
 export interface ChatConversation {
   id: string;
-  participants: string[];          // [buyerId, sellerId]
+  buyerId: string;
+  sellerId: string;
   participantNames: Record<string, string>;
   productId?: string;
   productTitle?: string;
   lastMessage: string;
-  lastMessageAt: Date;
+  lastMessageAt: string;
   unreadCount: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toMessage(id: string, data: any): ChatMessage {
+function toMessage(row: any): ChatMessage {
   return {
-    id,
-    senderId:   data.senderId,
-    senderName: data.senderName,
-    content:    data.content,
-    imageUrl:   data.imageUrl,
-    sentAt:     data.sentAt?.toDate?.() ?? new Date(),
-    read:       data.read ?? false,
+    id:             row.id,
+    conversationId: row.conversation_id,
+    senderId:       row.sender_id,
+    senderName:     row.sender_name,
+    content:        row.content,
+    imageUrl:       row.image_url ?? undefined,
+    sentAt:         row.sent_at?.toISOString?.() ?? new Date().toISOString(),
+    read:           row.read ?? false,
   };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toConversation(id: string, data: any): ChatConversation {
+function toConversation(row: any, currentUserId: string): ChatConversation {
+  const names: Record<string, string> = {
+    [row.buyer_id]:  row.buyer_name  ?? 'Buyer',
+    [row.seller_id]: row.seller_name ?? 'Seller',
+  };
+  const unread = currentUserId === row.buyer_id ? row.buyer_unread : row.seller_unread;
   return {
-    id,
-    participants:     data.participants ?? [],
-    participantNames: data.participantNames ?? {},
-    productId:        data.productId,
-    productTitle:     data.productTitle,
-    lastMessage:      data.lastMessage ?? '',
-    lastMessageAt:    data.lastMessageAt?.toDate?.() ?? new Date(),
-    unreadCount:      data.unreadCount ?? 0,
+    id:               row.id,
+    buyerId:          row.buyer_id,
+    sellerId:         row.seller_id,
+    participantNames: names,
+    productId:        row.product_id ?? undefined,
+    productTitle:     row.product_title ?? undefined,
+    lastMessage:      row.last_message ?? '',
+    lastMessageAt:    row.last_message_at?.toISOString?.() ?? new Date().toISOString(),
+    unreadCount:      unread ?? 0,
   };
 }
 
-// ── Get or create conversation between buyer and seller ──────────────────────
 export async function getOrCreateConversation(
   buyerId: string,
   buyerName: string,
@@ -70,101 +70,85 @@ export async function getOrCreateConversation(
   productId?: string,
   productTitle?: string
 ): Promise<string> {
-  // Check if conversation already exists
-  const q = query(
-    collection(db, 'conversations'),
-    where('participants', 'array-contains', buyerId)
-  );
-  const snap = await getDocs(q);
-  const existing = snap.docs.find(d => {
-    const p = d.data().participants as string[];
-    return p.includes(sellerId) && (!productId || d.data().productId === productId);
-  });
+  // Check for existing conversation
+  const existing = await sql`
+    SELECT id FROM conversations
+    WHERE buyer_id = ${buyerId} AND seller_id = ${sellerId}
+      AND (${productId ?? null}::text IS NULL OR product_id = ${productId ?? null})
+    LIMIT 1`;
 
-  if (existing) return existing.id;
+  if (existing.length) return existing[0].id as string;
 
-  // Create new conversation
-  const convRef = await addDoc(collection(db, 'conversations'), {
-    participants:     [buyerId, sellerId],
-    participantNames: { [buyerId]: buyerName, [sellerId]: sellerName },
-    productId:        productId ?? null,
-    productTitle:     productTitle ?? null,
-    lastMessage:      '',
-    lastMessageAt:    serverTimestamp(),
-    unreadCount:      0,
-    createdAt:        serverTimestamp(),
-  });
+  const rows = await sql`
+    INSERT INTO conversations (buyer_id, seller_id, product_id, product_title, last_message)
+    VALUES (${buyerId}, ${sellerId}, ${productId ?? null}, ${productTitle ?? null}, '')
+    RETURNING id`;
 
-  return convRef.id;
+  // Store names in users table (they should already exist)
+  void buyerName; void sellerName; // names fetched via JOIN on read
+
+  return rows[0].id as string;
 }
 
-// ── Get all conversations for a user ─────────────────────────────────────────
 export async function getUserConversations(userId: string): Promise<ChatConversation[]> {
-  const q = query(
-    collection(db, 'conversations'),
-    where('participants', 'array-contains', userId),
-    orderBy('lastMessageAt', 'desc')
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => toConversation(d.id, d.data()));
+  const rows = await sql`
+    SELECT c.*,
+      ub.name AS buyer_name,
+      us.name AS seller_name
+    FROM conversations c
+    LEFT JOIN users ub ON ub.uid = c.buyer_id
+    LEFT JOIN users us ON us.uid = c.seller_id
+    WHERE c.buyer_id = ${userId} OR c.seller_id = ${userId}
+    ORDER BY c.last_message_at DESC`;
+
+  return rows.map(r => toConversation(r, userId));
 }
 
-// ── Subscribe to messages in a conversation (real-time) ──────────────────────
-export function subscribeToMessages(
-  convId: string,
-  onMessages: (msgs: ChatMessage[]) => void
-): Unsubscribe {
-  const q = query(
-    collection(db, 'conversations', convId, 'messages'),
-    orderBy('sentAt', 'asc')
-  );
-  return onSnapshot(q, (snap) => {
-    onMessages(snap.docs.map(d => toMessage(d.id, d.data())));
-  });
+/** Poll for messages — called every 3s by the client */
+export async function getMessages(convId: string): Promise<ChatMessage[]> {
+  const rows = await sql`
+    SELECT * FROM messages
+    WHERE conversation_id = ${convId}
+    ORDER BY sent_at ASC`;
+  return rows.map(toMessage);
 }
 
-// ── Subscribe to conversations list (real-time) ───────────────────────────────
-export function subscribeToConversations(
-  userId: string,
-  onUpdate: (convs: ChatConversation[]) => void
-): Unsubscribe {
-  const q = query(
-    collection(db, 'conversations'),
-    where('participants', 'array-contains', userId),
-    orderBy('lastMessageAt', 'desc')
-  );
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map(d => toConversation(d.id, d.data())));
-  });
+/** Poll for new messages since a timestamp — more efficient */
+export async function getMessagesSince(convId: string, since: string): Promise<ChatMessage[]> {
+  const rows = await sql`
+    SELECT * FROM messages
+    WHERE conversation_id = ${convId} AND sent_at > ${since}::timestamptz
+    ORDER BY sent_at ASC`;
+  return rows.map(toMessage);
 }
 
-// ── Send a message ────────────────────────────────────────────────────────────
 export async function sendMessage(
   convId: string,
   senderId: string,
   senderName: string,
   content: string,
   imageUrl?: string
-): Promise<void> {
-  const msgRef = collection(db, 'conversations', convId, 'messages');
-  await addDoc(msgRef, {
-    senderId,
-    senderName,
-    content,
-    imageUrl:  imageUrl ?? null,
-    sentAt:    serverTimestamp(),
-    read:      false,
-  });
+): Promise<ChatMessage> {
+  const rows = await sql`
+    INSERT INTO messages (conversation_id, sender_id, sender_name, content, image_url)
+    VALUES (${convId}, ${senderId}, ${senderName}, ${content}, ${imageUrl ?? null})
+    RETURNING *`;
 
-  // Update conversation metadata
-  await updateDoc(doc(db, 'conversations', convId), {
-    lastMessage:   content,
-    lastMessageAt: serverTimestamp(),
-    unreadCount:   1, // increment properly in production with FieldValue.increment
-  });
+  await sql`
+    UPDATE conversations
+    SET last_message = ${content}, last_message_at = NOW(),
+        buyer_unread  = CASE WHEN seller_id = ${senderId} THEN buyer_unread + 1  ELSE buyer_unread  END,
+        seller_unread = CASE WHEN buyer_id  = ${senderId} THEN seller_unread + 1 ELSE seller_unread END
+    WHERE id = ${convId}`;
+
+  return toMessage(rows[0]);
 }
 
-// ── Mark messages as read ─────────────────────────────────────────────────────
-export async function markConversationRead(convId: string): Promise<void> {
-  await updateDoc(doc(db, 'conversations', convId), { unreadCount: 0 });
+export async function markConversationRead(convId: string, userId: string, role: 'buyer' | 'seller'): Promise<void> {
+  if (role === 'buyer') {
+    await sql`UPDATE conversations SET buyer_unread = 0 WHERE id = ${convId}`;
+  } else {
+    await sql`UPDATE conversations SET seller_unread = 0 WHERE id = ${convId}`;
+  }
+  await sql`UPDATE messages SET read = true WHERE conversation_id = ${convId} AND sender_id != ${userId}`;
 }

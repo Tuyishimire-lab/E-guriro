@@ -1,117 +1,142 @@
 /**
- * Products Service — Firestore
- * All components that call these functions require ZERO changes.
+ * Products Service — Neon Postgres + Upstash Redis cache
  */
-import {
-  collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, limit as fsLimit, serverTimestamp,
-  type QueryConstraint,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { sql } from '@/lib/db';
+import { cacheGet, cacheSet, cacheInvalidatePrefix, cacheDelete, CK } from '@/lib/kv';
 import type { Product } from '@/lib/types';
 
-const COL = 'products';
-
-// ── Helper: convert Firestore doc → Product ──────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toProduct(id: string, data: any): Product {
+function toProduct(row: any): Product {
   return {
-    id,
-    title:         data.title,
-    price:         data.price,
-    originalPrice: data.originalPrice,
-    image:         data.image ?? '',
-    images:        data.images ?? [],
-    rating:        data.rating ?? 0,
-    reviews:       data.reviews ?? 0,
-    seller:        data.seller ?? '',
-    sellerId:      data.sellerId ?? '',
-    category:      data.category ?? '',
-    brand:         data.brand ?? '',
-    badge:         data.badge,
-    stock:         data.stock ?? 0,
-    condition:     data.condition ?? 'new',
-    warranty:      data.warranty,
-    specs:         data.specs,
-    description:   data.description,
-    createdAt:     data.createdAt?.toDate?.()?.toISOString() ?? '',
-    status:        data.status ?? 'active',
+    id:            row.id,
+    title:         row.title,
+    price:         row.price,
+    originalPrice: row.original_price,
+    image:         row.image ?? '',
+    images:        row.images ?? [],
+    rating:        parseFloat(row.rating) || 0,
+    reviews:       row.reviews_count ?? 0,
+    seller:        row.seller_name ?? '',
+    sellerId:      row.seller_id ?? '',
+    category:      row.category ?? '',
+    brand:         row.brand ?? '',
+    badge:         row.badge,
+    stock:         row.stock ?? 0,
+    condition:     row.condition ?? 'new',
+    warranty:      row.warranty,
+    specs:         row.specs,
+    description:   row.description,
+    createdAt:     row.created_at?.toISOString?.() ?? '',
+    status:        row.status ?? 'active',
   };
 }
 
-// ── getProducts ───────────────────────────────────────────────────────────────
 export async function getProducts(filters?: {
   category?: string;
   sellerId?: string;
   search?: string;
   limit?: number;
 }): Promise<Product[]> {
-  const constraints: QueryConstraint[] = [
-    where('status', '==', 'active'),
-    orderBy('createdAt', 'desc'),
-  ];
-
-  if (filters?.category) {
-    constraints.push(where('category', '==', filters.category));
-  }
-  if (filters?.sellerId) {
-    constraints.push(where('sellerId', '==', filters.sellerId));
-  }
-  if (filters?.limit) {
-    constraints.push(fsLimit(filters.limit));
+  // Only cache unfiltered / category-only queries
+  if (!filters?.search && !filters?.sellerId) {
+    const cacheKey = filters?.category
+      ? CK.productsCat(filters.category)
+      : CK.products;
+    const cached = await cacheGet<Product[]>(cacheKey);
+    if (cached) return cached;
   }
 
-  const q = query(collection(db, COL), ...constraints);
-  const snap = await getDocs(q);
-  let products = snap.docs.map(d => toProduct(d.id, d.data()));
+  let rows;
+  if (filters?.category && !filters.search && !filters.sellerId) {
+    rows = await sql`
+      SELECT * FROM products
+      WHERE status = 'active' AND category = ${filters.category}
+      ORDER BY created_at DESC
+      LIMIT ${filters.limit ?? 100}`;
+  } else if (filters?.sellerId) {
+    rows = await sql`
+      SELECT * FROM products
+      WHERE seller_id = ${filters.sellerId}
+      ORDER BY created_at DESC`;
+  } else if (filters?.search) {
+    const term = `%${filters.search.toLowerCase()}%`;
+    rows = await sql`
+      SELECT * FROM products
+      WHERE status = 'active'
+        AND (LOWER(title) LIKE ${term} OR LOWER(brand) LIKE ${term} OR LOWER(category) LIKE ${term})
+      ORDER BY created_at DESC
+      LIMIT ${filters.limit ?? 50}`;
+  } else {
+    rows = await sql`
+      SELECT * FROM products
+      WHERE status = 'active'
+      ORDER BY created_at DESC
+      LIMIT ${filters?.limit ?? 100}`;
+  }
 
-  // Client-side search (Firestore doesn't support full-text natively)
-  if (filters?.search) {
-    const term = filters.search.toLowerCase();
-    products = products.filter(p =>
-      p.title.toLowerCase().includes(term) ||
-      p.brand?.toLowerCase().includes(term) ||
-      p.category?.toLowerCase().includes(term)
-    );
+  const products = rows.map(toProduct);
+
+  // Cache unfiltered + category queries
+  if (!filters?.search && !filters?.sellerId) {
+    const cacheKey = filters?.category ? CK.productsCat(filters.category) : CK.products;
+    await cacheSet(cacheKey, products, 300);
   }
 
   return products;
 }
 
-// ── getProductById ────────────────────────────────────────────────────────────
 export async function getProductById(id: string): Promise<Product | null> {
-  const snap = await getDoc(doc(db, COL, id));
-  if (!snap.exists()) return null;
-  return toProduct(snap.id, snap.data());
+  const cached = await cacheGet<Product>(CK.product(id));
+  if (cached) return cached;
+
+  const rows = await sql`SELECT * FROM products WHERE id = ${id} LIMIT 1`;
+  if (!rows.length) return null;
+  const product = toProduct(rows[0]);
+  await cacheSet(CK.product(id), product, 600);
+  return product;
 }
 
-// ── createProduct ─────────────────────────────────────────────────────────────
 export async function createProduct(
   data: Omit<Product, 'id' | 'createdAt'>,
-  imageUrls?: string[]   // CDN URLs already uploaded via /api/upload
+  imageUrls?: string[]
 ): Promise<string> {
   const urls = imageUrls ?? (data.images?.length ? data.images : [data.image]);
-  const primaryImage = urls[0] ?? data.image ?? '';
+  const primaryImage = urls[0] ?? '';
 
-  const docRef = await addDoc(collection(db, COL), {
-    ...data,
-    image:     primaryImage,
-    images:    urls,
-    rating:    0,
-    reviews:   0,
-    status:    'pending',   // requires admin approval before going live
-    createdAt: serverTimestamp(),
-  });
+  const rows = await sql`
+    INSERT INTO products
+      (title, price, original_price, image, images, seller_name, seller_id,
+       category, brand, badge, stock, condition, warranty, specs, description, status)
+    VALUES
+      (${data.title}, ${data.price}, ${data.originalPrice ?? null}, ${primaryImage},
+       ${urls as unknown as string}, ${data.seller}, ${data.sellerId ?? null},
+       ${data.category ?? null}, ${data.brand ?? null}, ${data.badge ?? null},
+       ${data.stock ?? 0}, ${data.condition ?? 'new'}, ${data.warranty ?? null},
+       ${JSON.stringify(data.specs ?? {})}, ${data.description ?? null}, 'pending')
+    RETURNING id`;
 
-  return docRef.id;
+  await cacheInvalidatePrefix('products:');
+  return rows[0].id as string;
 }
 
-// ── updateProduct ─────────────────────────────────────────────────────────────
 export async function updateProduct(id: string, data: Partial<Product>): Promise<void> {
-  await updateDoc(doc(db, COL, id), { ...data, updatedAt: serverTimestamp() });
+  await sql`
+    UPDATE products SET
+      title          = COALESCE(${data.title ?? null}, title),
+      price          = COALESCE(${data.price ?? null}, price),
+      original_price = COALESCE(${data.originalPrice ?? null}, original_price),
+      stock          = COALESCE(${data.stock ?? null}, stock),
+      status         = COALESCE(${data.status ?? null}, status),
+      description    = COALESCE(${data.description ?? null}, description),
+      updated_at     = NOW()
+    WHERE id = ${id}`;
+
+  await cacheInvalidatePrefix('products:');
+  await cacheDelete(CK.product(id));
 }
 
-// ── deleteProduct ─────────────────────────────────────────────────────────────
 export async function deleteProduct(id: string): Promise<void> {
-  await deleteDoc(doc(db, COL, id));
+  await sql`DELETE FROM products WHERE id = ${id}`;
+  await cacheInvalidatePrefix('products:');
+  await cacheDelete(CK.product(id));
 }

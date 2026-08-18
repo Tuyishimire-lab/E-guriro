@@ -1,56 +1,72 @@
 /**
- * Users Service — Firestore
- * Used by admin panel and buyer profile management.
+ * Users Service — Neon Postgres
  */
-import {
-  collection, doc, getDoc, getDocs, updateDoc,
-  query, where, orderBy, serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { sql } from '@/lib/db';
 import type { User } from '@/lib/types';
 
-const COL = 'users';
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toUser(id: string, data: any): User {
+function toUser(row: any): User {
   return {
-    uid:       id,
-    name:      data.name ?? '',
-    email:     data.email ?? '',
-    role:      data.role ?? 'buyer',
-    district:  data.district,
-    phone:     data.phone,
-    shopName:  data.shopName,
-    avatarUrl: data.avatarUrl,
-    createdAt: data.createdAt?.toDate?.()?.toISOString(),
-    status:    data.status ?? 'active',
+    uid:       row.uid,
+    name:      row.name ?? '',
+    email:     row.email ?? '',
+    role:      row.role ?? 'buyer',
+    district:  row.district,
+    phone:     row.phone,
+    shopName:  row.shop_name,
+    avatarUrl: row.avatar_url,
+    createdAt: row.created_at?.toISOString?.(),
+    status:    row.status ?? 'active',
   };
 }
 
 export async function getUserById(uid: string): Promise<User | null> {
-  const snap = await getDoc(doc(db, COL, uid));
-  if (!snap.exists()) return null;
-  return toUser(snap.id, snap.data());
+  const rows = await sql`SELECT * FROM users WHERE uid = ${uid} LIMIT 1`;
+  if (!rows.length) return null;
+  return toUser(rows[0]);
+}
+
+export async function upsertUser(data: {
+  uid: string; name: string; email: string; role: 'buyer' | 'seller' | 'admin';
+  district?: string; phone?: string; shopName?: string; avatarUrl?: string;
+  status?: string;
+}): Promise<void> {
+  await sql`
+    INSERT INTO users (uid, name, email, role, district, phone, shop_name, avatar_url, status)
+    VALUES (${data.uid}, ${data.name}, ${data.email}, ${data.role},
+            ${data.district ?? null}, ${data.phone ?? null}, ${data.shopName ?? null},
+            ${data.avatarUrl ?? null}, ${data.status ?? 'active'})
+    ON CONFLICT (uid) DO UPDATE SET
+      name       = EXCLUDED.name,
+      email      = EXCLUDED.email,
+      district   = COALESCE(EXCLUDED.district, users.district),
+      phone      = COALESCE(EXCLUDED.phone, users.phone),
+      shop_name  = COALESCE(EXCLUDED.shop_name, users.shop_name),
+      avatar_url = COALESCE(EXCLUDED.avatar_url, users.avatar_url),
+      updated_at = NOW()`;
 }
 
 export async function getAllBuyers(): Promise<User[]> {
-  const q = query(
-    collection(db, COL),
-    where('role', '==', 'buyer'),
-    orderBy('createdAt', 'desc')
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => toUser(d.id, d.data()));
+  const rows = await sql`
+    SELECT * FROM users WHERE role = 'buyer' ORDER BY created_at DESC`;
+  return rows.map(toUser);
 }
 
 export async function updateUserProfile(uid: string, data: Partial<User>): Promise<void> {
-  await updateDoc(doc(db, COL, uid), { ...data, updatedAt: serverTimestamp() });
+  await sql`
+    UPDATE users SET
+      name       = COALESCE(${data.name ?? null}, name),
+      district   = COALESCE(${data.district ?? null}, district),
+      phone      = COALESCE(${data.phone ?? null}, phone),
+      avatar_url = COALESCE(${data.avatarUrl ?? null}, avatar_url),
+      updated_at = NOW()
+    WHERE uid = ${uid}`;
 }
 
 export async function suspendUser(uid: string): Promise<void> {
-  await updateDoc(doc(db, COL, uid), { status: 'suspended', updatedAt: serverTimestamp() });
+  await sql`UPDATE users SET status = 'suspended', updated_at = NOW() WHERE uid = ${uid}`;
 }
 
 export async function activateUser(uid: string): Promise<void> {
-  await updateDoc(doc(db, COL, uid), { status: 'active', updatedAt: serverTimestamp() });
+  await sql`UPDATE users SET status = 'active', updated_at = NOW() WHERE uid = ${uid}`;
 }
