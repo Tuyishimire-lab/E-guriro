@@ -91,4 +91,8 @@ export {
   UilCog,
   UilGlobe,
   UilImages,
+  /* Chat UI icons */
+  UilEllipsisV,
+  UilSmile,
+  UilUserCircle,
 } from '@iconscout/react-unicons';
