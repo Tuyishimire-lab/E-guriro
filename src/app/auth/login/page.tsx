@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -70,16 +70,16 @@ export default function LoginPage() {
   };
 
   const demoLogins = [
-    { label: 'Login as Buyer',  email: 'buyer@eguriro.rw',  color: 'var(--color-info)',  icon: <UilUser   size="15" /> },
-    { label: 'Login as Seller', email: 'seller@eguriro.rw', color: 'var(--brand-green)', icon: <UilStore  size="15" /> },
-    { label: 'Login as Admin',  email: 'admin@eguriro.rw',  color: 'var(--color-error)', icon: <UilShield size="15" /> },
+    { label: 'Login as Buyer',  email: 'buyer@rwandabuy.rw',  color: 'var(--color-info)',  icon: <UilUser   size="15" /> },
+    { label: 'Login as Seller', email: 'seller@rwandabuy.rw', color: 'var(--brand-green)', icon: <UilStore  size="15" /> },
+    { label: 'Login as Admin',  email: 'admin@rwandabuy.rw',  color: 'var(--color-error)', icon: <UilShield size="15" /> },
   ];
 
   return (
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <Link href="/" className={styles.logo}>E-<span>guriro</span></Link>
+          <Link href="/" className={styles.logo}>Rwanda<span>Buy</span></Link>
           <h1 className={styles.title}>Welcome Back</h1>
           <p className={styles.subtitle}>Sign in to your account to continue shopping</p>
         </div>

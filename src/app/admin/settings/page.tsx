@@ -5,7 +5,7 @@ import { UilCog, UilStore, UilTruck, UilCreditCard, UilShield, UilMoneyBill, Uil
 import styles from '../layout.module.css';
 
 export default function AdminSettings() {
-  const [platform, setPlatform] = useState({ name: 'E-guriro', tagline: "Rwanda's #1 Electronics & Phone Store", supportEmail: 'support@e-guriro.rw', supportPhone: '+250 788 000 000', currency: 'RWF' });
+  const [platform, setPlatform] = useState({ name: 'RwandaBuy', tagline: "Rwanda's #1 Electronics & Phone Store", supportEmail: 'support@RwandaBuy.rw', supportPhone: '+250 788 000 000', currency: 'RWF' });
   const [commission, setCommission] = useState(8);
   const [shipping, setShipping] = useState<Record<string, number>>(SHIPPING_FEES);
   const [payments, setPayments] = useState({ mtnMomo: true, airtelMoney: true, visa: true, mastercard: true, bankTransfer: true });
@@ -76,7 +76,7 @@ export default function AdminSettings() {
             </div>
           </div>
           <div style={{ background: 'rgba(0,165,80,0.06)', border: '1px solid rgba(0,165,80,0.2)', borderRadius: 'var(--radius-md)', padding: '12px 16px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            At {commission}% commission: on a RWF 500,000 sale, E-guriro earns RWF {(500000 * commission / 100).toLocaleString()} and the seller receives RWF {(500000 * (1 - commission / 100)).toLocaleString()}.
+            At {commission}% commission: on a RWF 500,000 sale, RwandaBuy earns RWF {(500000 * commission / 100).toLocaleString()} and the seller receives RWF {(500000 * (1 - commission / 100)).toLocaleString()}.
           </div>
           <button className="btn btn-primary btn-sm" onClick={saveCommission}>Update Rate</button>
         </div>

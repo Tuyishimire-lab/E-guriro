@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -130,7 +130,7 @@ export default function HomePage() {
               <Link href="/auth/register?role=seller" className="btn btn-secondary btn-lg" id="hero-sell-btn"
                 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <UilStore size="20" />
-                Sell on E-guriro
+                Sell on RwandaBuy
               </Link>
             </div>
             <div className={styles.heroStats}>

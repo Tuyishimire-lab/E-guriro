@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-const STORAGE_KEY = 'eguriro-wishlist';
+const STORAGE_KEY = 'rwandabuy-wishlist';
 
 interface WishlistContextType {
   items: string[];

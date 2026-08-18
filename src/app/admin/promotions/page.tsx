@@ -15,7 +15,7 @@ const INITIAL_FLASH: FlashSale[] = [
   { id: 'f2', name: 'Samsung Super Deal', discount: 20, products: ['1', '4'], endsAt: '2026-08-20T12:00', active: false },
 ];
 const INITIAL_CODES: DiscountCode[] = [
-  { id: 'c1', code: 'EGURIRO10', type: 'percent', value: 10, maxUses: 500, usedCount: 123, expiry: '2026-09-30', active: true },
+  { id: 'c1', code: 'RWANDABUY10', type: 'percent', value: 10, maxUses: 500, usedCount: 123, expiry: '2026-09-30', active: true },
   { id: 'c2', code: 'WELCOME5K', type: 'fixed', value: 5000, maxUses: 1000, usedCount: 0, expiry: '2026-12-31', active: true },
   { id: 'c3', code: 'FLASH25', type: 'percent', value: 25, maxUses: 100, usedCount: 100, expiry: '2026-08-15', active: false },
 ];

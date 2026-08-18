@@ -1,5 +1,5 @@
-/**
- * Centralized TypeScript interfaces for E-guriro.
+﻿/**
+ * Centralized TypeScript interfaces for RwandaBuy.
  * These map 1:1 to future Firestore document shapes.
  * When Firebase is integrated, replace the service layer bodies —
  * these types remain unchanged.

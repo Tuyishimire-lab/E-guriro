@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import Link from 'next/link';
 import {
   UilMobileAndroid, UilLaptop, UilHeadphones, UilTablet,
@@ -31,7 +31,7 @@ const HELP_LINKS = [
 ];
 
 const COMPANY_LINKS = [
-  { label: 'About E-guriro', href: '/about' },
+  { label: 'About RwandaBuy', href: '/about' },
   { label: 'Careers', href: '/careers' },
   { label: 'Contact Us', href: '/contact' },
   { label: 'Privacy Policy', href: '/privacy' },
@@ -48,7 +48,7 @@ export default function Footer() {
         <div className={styles.brand}>
           <Link href="/" className={styles.logo}>
             <UilMobileAndroid size="22" style={{ color: 'var(--brand-green)' }} />
-            <span className={styles.logoText}>E<span className={styles.logoAccent}>-guriro</span></span>
+            <span className={styles.logoText}>Rwanda<span className={styles.logoAccent}>Buy</span></span>
           </Link>
 
           <p className={styles.tagline}>
@@ -89,9 +89,9 @@ export default function Footer() {
               <UilPhone size="14" />
               +250 788 000 000
             </a>
-            <a href="mailto:support@e-guriro.rw" className={styles.contactItem}>
+            <a href="mailto:support@RwandaBuy.rw" className={styles.contactItem}>
               <UilEnvelope size="14" />
-              support@e-guriro.rw
+              support@RwandaBuy.rw
             </a>
             <span className={styles.contactItem}>
               <UilMapMarker size="14" />
@@ -140,7 +140,7 @@ export default function Footer() {
       <div className={styles.footerBottom}>
         <div className={styles.bottomInner}>
             <p className={styles.copyright}>
-              &copy; {new Date().getFullYear()} E-guriro Ltd. All rights reserved. &nbsp;|&nbsp; Kigali, Rwanda
+              &copy; {new Date().getFullYear()} RwandaBuy Ltd. All rights reserved. &nbsp;|&nbsp; Kigali, Rwanda
             </p>
             <p className={styles.bottomTagline}>
               Rwanda's #1 Electronics Marketplace

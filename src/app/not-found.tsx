@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 
 export default function NotFound() {
   return (
@@ -22,7 +22,7 @@ export default function NotFound() {
         <Link href="/products" className="btn btn-secondary">Browse Products</Link>
       </div>
       <p style={{ marginTop: 40, color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-        E-<span style={{ color: 'var(--brand-green)' }}>guriro</span> — Rwanda's Electronics Marketplace
+        Rwanda<span style={{ color: 'var(--brand-green)' }}>Buy</span> — Rwanda's Electronics Marketplace
       </p>
     </div>
   );

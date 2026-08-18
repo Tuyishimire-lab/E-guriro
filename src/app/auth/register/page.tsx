@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -74,7 +74,7 @@ export default function RegisterPage() {
     <div className={styles.page}>
       <div className={styles.card} style={{ maxWidth: 500 }}>
         <div className={styles.header}>
-          <Link href="/" className={styles.logo}>E-<span>guriro</span></Link>
+          <Link href="/" className={styles.logo}>Rwanda<span>Buy</span></Link>
           <h1 className={styles.title}>Create Account</h1>
           <p className={styles.subtitle}>Join Rwanda&apos;s fastest-growing marketplace</p>
         </div>

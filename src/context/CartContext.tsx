@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export interface CartItem {
@@ -28,12 +28,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
  const [items, setItems] = useState<CartItem[]>([]);
 
  useEffect(() =>{
- const saved = localStorage.getItem('eguriro-cart');
+ const saved = localStorage.getItem('rwandabuy-cart');
  if (saved) setItems(JSON.parse(saved));
  }, []);
 
  useEffect(() =>{
- localStorage.setItem('eguriro-cart', JSON.stringify(items));
+ localStorage.setItem('rwandabuy-cart', JSON.stringify(items));
  }, [items]);
 
  const addToCart = useCallback((product: Omit<CartItem, 'quantity'>) =>{

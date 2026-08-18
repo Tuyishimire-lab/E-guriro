@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Centralized Icon Registry
- * All Unicons from @iconscout/react-unicons used across E-guriro.
+ * All Unicons from @iconscout/react-unicons used across RwandaBuy.
  * Import from here  never import directly from the package in pages.
  */
 export {

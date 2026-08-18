@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   createUserWithEmailAndPassword,
@@ -47,9 +47,9 @@ interface AuthContextType {
 function persistCookie(user: User | null) {
   if (user) {
     const encoded = encodeURIComponent(JSON.stringify(user));
-    document.cookie = `eguriro-user=${encoded}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+    document.cookie = `rwandabuy-user=${encoded}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   } else {
-    document.cookie = 'eguriro-user=; path=/; max-age=0';
+    document.cookie = 'rwandabuy-user=; path=/; max-age=0';
   }
 }
 

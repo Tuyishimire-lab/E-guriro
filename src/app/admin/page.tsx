@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatRWF, MOCK_PRODUCTS, MOCK_SELLERS } from '@/lib/constants';
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>Platform Dashboard</h1>
-          <p className={styles.pageSub}>E-guriro Marketplace — real-time overview</p>
+          <p className={styles.pageSub}>RwandaBuy Marketplace — real-time overview</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Link href="/admin/promotions" className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

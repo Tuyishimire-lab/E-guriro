@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''} ${mobileOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarLogo}>
           <UilShield size="22" className={styles.logoIcon} />
-          {!collapsed && <span className={styles.logoText}>E<span className={styles.logoAccent}>-guriro</span> Admin</span>}
+          {!collapsed && <span className={styles.logoText}>Rwanda<span className={styles.logoAccent}>Buy</span> Admin</span>}
         </div>
 
         <nav className={styles.sidebarNav}>

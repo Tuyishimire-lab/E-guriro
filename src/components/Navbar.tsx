@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
@@ -58,7 +58,7 @@ export default function Navbar() {
         <Link href="/" className={styles.logo}>
           <UilShoppingCart size="22" className={styles.logoIconSvg} />
           <span className={styles.logoText}>
-            E<span className={styles.logoAccent}>-guriro</span>
+            Rwanda<span className={styles.logoAccent}>Buy</span>
           </span>
         </Link>
 

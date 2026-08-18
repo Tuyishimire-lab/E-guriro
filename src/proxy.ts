@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Public routes inside /seller/** that anyone can visit (no auth needed)
@@ -27,7 +27,7 @@ export function proxy(request: NextRequest) {
   if (!match) return NextResponse.next();
 
   // Read the persisted user from the cookie (set by AuthContext on login)
-  const userCookie = request.cookies.get('eguriro-user')?.value;
+  const userCookie = request.cookies.get('rwandabuy-user')?.value;
 
   // Not logged in at all
   if (!userCookie) {
@@ -55,7 +55,7 @@ export function proxy(request: NextRequest) {
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     const res = NextResponse.redirect(loginUrl);
-    res.cookies.delete('eguriro-user');
+    res.cookies.delete('rwandabuy-user');
     return res;
   }
 
