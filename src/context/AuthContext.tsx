@@ -6,6 +6,8 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  signInWithPopup,
+  GoogleAuthProvider,
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -36,6 +38,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -98,6 +101,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (profile) { setUser(profile); persistCookie(profile); }
   };
 
+  const loginWithGoogle = async () => {
+    if (!auth) throw new Error('Auth not initialized');
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const cred = await signInWithPopup(auth, provider);
+
+    // Check if this user already exists in Postgres
+    let profile = await fetchProfile(cred.user);
+
+    if (!profile) {
+      // First-time Google sign-in — create buyer profile in Postgres
+      await fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid:      cred.user.uid,
+          name:     cred.user.displayName ?? 'User',
+          email:    cred.user.email ?? '',
+          role:     'buyer',
+          avatarUrl: cred.user.photoURL ?? undefined,
+        }),
+      });
+      profile = {
+        uid:       cred.user.uid,
+        name:      cred.user.displayName ?? 'User',
+        email:     cred.user.email ?? '',
+        role:      'buyer',
+        avatarUrl: cred.user.photoURL ?? undefined,
+      };
+    }
+
+    setUser(profile);
+    persistCookie(profile);
+  };
+
   const register = async (data: RegisterData) => {
     if (!auth) throw new Error('Auth not initialized');
     const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -131,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
