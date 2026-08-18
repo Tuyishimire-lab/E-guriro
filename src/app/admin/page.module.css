@@ -1,0 +1,83 @@
+.adminBadge {
+ background: rgba(239,68,68,0.15);
+ color: var(--color-error);
+ border: 1px solid rgba(239,68,68,0.3);
+ padding: 4px 12px;
+ border-radius: var(--radius-full);
+ font-size: 0.75rem;
+ font-weight: 700;
+ text-transform: uppercase;
+ letter-spacing: 0.05em;
+}
+
+.statsGrid6 {
+ display: grid;
+ grid-template-columns: repeat(3, 1fr);
+ gap: var(--space-lg);
+}
+
+.twoCol {
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: var(--space-xl);
+}
+
+/* Seller Rank List */
+.sellerRankList { display: flex; flex-direction: column; gap: 10px; }
+
+.sellerRankItem {
+ display: flex;
+ align-items: center;
+ gap: var(--space-md);
+ padding: var(--space-md);
+ background: var(--bg-card);
+ border: 1px solid var(--border-color);
+ border-radius: var(--radius-md);
+}
+
+.rank { font-size: 1.1rem; font-weight: 800; color: var(--brand-gold); width: 28px; text-align: center; flex-shrink: 0; }
+
+.sellerRankAvatar { width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--brand-green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+
+.sellerRankInfo { flex: 1; }
+.sellerRankName { font-weight: 700; font-size: 0.9rem; }
+.sellerRankMeta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.sellerRankProducts { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+
+/* Action List */
+.actionList { display: flex; flex-direction: column; gap: 10px; }
+
+.actionItem {
+ display: flex;
+ align-items: center;
+ gap: var(--space-md);
+ padding: var(--space-md) var(--space-lg);
+ background: var(--bg-card);
+ border: 1px solid var(--border-color);
+ border-radius: var(--radius-md);
+ font-size: 0.875rem;
+}
+.actionItem >span { font-size: 1.5rem; flex-shrink: 0; }
+.actionItem >div { flex: 1; }
+.actionSub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+/* Disputes */
+.disputeCard {
+ background: var(--bg-card);
+ border: 1px solid rgba(239,68,68,0.2);
+ border-radius: var(--radius-lg);
+ overflow: hidden;
+}
+.disputeHeader { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md) var(--space-lg); background: rgba(239,68,68,0.05); border-bottom: 1px solid var(--border-color); }
+.disputeId { font-weight: 700; font-family: monospace; color: var(--color-error); }
+.disputeBody { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; padding: var(--space-lg); }
+.disputeRow { display: flex; flex-direction: column; gap: 4px; }
+.disputeRow span { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; }
+.disputeRow strong { font-size: 0.875rem; }
+.disputeActions { display: flex; gap: 8px; padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--border-color); flex-wrap: wrap; }
+
+@media (max-width: 900px) {
+ .statsGrid6 { grid-template-columns: repeat(2, 1fr); }
+ .twoCol { grid-template-columns: 1fr; }
+ .disputeBody { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}

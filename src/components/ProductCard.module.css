@@ -1,0 +1,292 @@
+/* 
+   CARD SHELL
+   Full-height flex column so the footer
+   always stays at the very bottom
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--transition-base);
+  cursor: pointer;
+  /* Critical: equal height in a grid row requires height: 100% on the card */
+  height: 100%;
+}
+
+.card:hover {
+  border-color: var(--border-active);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+}
+
+/* 
+   IMAGE ZONE
+ */
+.imageWrapper {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+.card:hover .image { transform: scale(1.07); }
+
+/* Badges */
+.badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  z-index: 1;
+}
+
+.badgeGold  { background: var(--brand-gold);   color: #111; }
+.badgeRed   { background: var(--color-error);  color: #fff; }
+.badgeGreen { background: var(--brand-green);  color: #fff; }
+.badgeBlue  { background: var(--color-info);   color: #fff; }
+.badgeAmber { background: #D97706;             color: #fff; }
+
+.discountBadge {
+  position: absolute;
+  top: 10px;
+  right: 40px;
+  background: var(--color-error);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.wishlistBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(0,0,0,0.4);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+.wishlistBtn:hover, .wishlisted { background: rgba(239,68,68,0.8); }
+
+/* 
+   CONTENT  two-zone flex column
+ */
+.content {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  flex: 1;           /* fills card height below the image */
+  min-height: 0;     /* allow flex children to shrink */
+}
+
+/*  ZONE 1: Variable body  grows to push footer down  */
+.contentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;           /* absorbs leftover vertical space */
+}
+
+/*  ZONE 2: Pinned footer  always at the bottom  */
+.contentFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color);
+}
+
+/* 
+   ZONE 1 CHILDREN
+ */
+/* Brand + seller top row */
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 20px;  /* consistent height even when no brand */
+}
+
+.brandTag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(14, 165, 233, 0.12);
+  color: var(--brand-tech);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* Invisible placeholder keeps brand slot height when brand is absent */
+.brandTagPlaceholder {
+  display: inline-block;
+  width: 0;
+  height: 20px;
+}
+
+.sellerName {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  flex: 1;
+}
+
+/* Title  always exactly 2 lines high */
+.title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.45;
+  /* Reserve exactly 2 lines  prevents height variance */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(0.9rem * 1.45 * 2); /* 2 lines at current font + line-height */
+}
+
+/* Spec chip row  always 3 slots */
+.specChipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  /* Ensure the row always takes up the same space (1 row height) */
+  min-height: 22px;
+}
+
+/* Invisible spacer chip  keeps row height consistent */
+.specChipSpacer {
+  display: inline-block;
+  height: 20px;  /* matches spec-chip height */
+  width: 0;
+  visibility: hidden;
+}
+
+/* 
+   ZONE 2 CHILDREN (Pinned Footer)
+ */
+/* Condition + warranty  always one line, always same height */
+.conditionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  flex-wrap: nowrap;
+}
+
+/* Placeholder when no warranty text  keeps row height */
+.warrantyPlaceholder {
+  display: inline-block;
+  height: 16px;
+  width: 0;
+}
+
+/* Stars row */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stars { display: flex; align-items: center; gap: 1px; }
+.starIcon { fill: var(--brand-gold); color: var(--brand-gold); }
+.reviewCount { font-size: 0.72rem; color: var(--text-muted); }
+
+/* Price row  main price always same size */
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 1.5rem;  /* anchors even when no original price */
+}
+
+.price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--brand-green);
+  white-space: nowrap;
+}
+
+.originalPrice {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-decoration: line-through;
+  white-space: nowrap;
+}
+
+/* Invisible placeholder  keeps priceRow height when no strikethrough */
+.originalPricePlaceholder {
+  display: inline-block;
+  height: 1rem;
+  width: 0;
+}
+
+/* Add to Cart button */
+.addBtn {
+  font-size: 0.82rem !important;
+  padding: 10px 12px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 2px;
+  min-height: 40px;
+}
+
+/* =====================
+   PRODUCT CARD RESPONSIVE
+   ===================== */
+@media (max-width: 768px) {
+  .card:hover { transform: none; } /* disable lift on touch devices */
+  .price { font-size: 0.95rem; }
+  .addBtn { padding: 9px 10px !important; font-size: 0.78rem !important; }
+}
+
+@media (max-width: 480px) {
+  /* At 2-col on 375px each card is ~165px wide — keep info readable */
+  .price { font-size: 0.9rem; }
+  .originalPrice { font-size: 0.7rem; }
+  .addBtn { font-size: 0.73rem !important; padding: 8px 8px !important; gap: 4px; }
+  .badge { font-size: 0.6rem; padding: 3px 7px; }
+}

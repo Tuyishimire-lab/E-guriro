@@ -1,0 +1,9 @@
+import { Suspense } from 'react';
+
+export default function RegisterLayout({ children }: { children: React.ReactNode }) {
+ return (
+ <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Loading...</div>}>
+ {children}
+ </Suspense>
+);
+}

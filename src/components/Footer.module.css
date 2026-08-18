@@ -1,0 +1,246 @@
+/* 
+   FOOTER SHELL
+ */
+.footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  margin-top: auto;
+}
+
+/* 
+   MAIN BODY: brand col + 4 link cols
+ */
+.footerInner {
+  display: grid;
+  grid-template-columns: 1.6fr 2.4fr;
+  gap: var(--space-3xl);
+  padding: 56px 0 44px;
+}
+
+/* 
+   BRAND COLUMN
+ */
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.logoText  { color: var(--text-primary); }
+.logoAccent { color: var(--brand-green); }
+
+.tagline {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.75;
+  max-width: 300px;
+}
+
+/* Trust badges (warranty / delivery / sellers) */
+.trustBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trustBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.18);
+  color: var(--brand-tech);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Payment methods */
+.paymentBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.paymentLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.paymentBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.payBadge {
+  background: rgba(0, 165, 80, 0.08);
+  border: 1px solid rgba(0, 165, 80, 0.25);
+  color: var(--brand-green);
+  padding: 5px 11px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Contact info */
+.contactBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.contactItem:hover { color: var(--brand-green); }
+
+/* 
+   LINKS GRID (4 cols)
+ */
+.linksGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-xl);
+  align-items: start;
+  padding-top: 4px;
+}
+
+.linkGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linkTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.link {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+  line-height: 1.4;
+}
+
+.link:hover { color: var(--brand-green); }
+
+/* 
+   BOTTOM BAR
+ */
+.footerBottom {
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-md) 0;
+  background: var(--bg-primary);
+}
+
+.bottomInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.copyright {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.bottomTagline {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+.socials {
+  display: flex;
+  gap: 8px;
+}
+
+.socialLink {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.socialLink:hover {
+  border-color: var(--brand-green);
+  color: var(--brand-green);
+  background: rgba(0, 165, 80, 0.1);
+}
+
+/* 
+   RESPONSIVE
+*/
+@media (max-width: 1024px) {
+  .footerInner {
+    grid-template-columns: 1fr;
+    gap: var(--space-2xl);
+    padding: 44px 0 36px;
+  }
+  .tagline { max-width: 100%; }
+  .linksGrid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .linksGrid { grid-template-columns: repeat(2, 1fr); gap: var(--space-lg); }
+  .bottomInner { flex-direction: column; gap: var(--space-sm); text-align: center; }
+  .bottomTagline { display: none; }
+  .footerInner { padding: 36px 0 28px; }
+  .trustBadges { gap: 6px; }
+  .contactBlock { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .linksGrid { grid-template-columns: repeat(2, 1fr); gap: var(--space-md); }
+  .trustBadges { gap: 6px; }
+  .logo { font-size: 1.3rem; }
+  .tagline { font-size: 0.82rem; }
+  .link { font-size: 0.82rem; }
+  .footerInner { padding: 28px 0 20px; }
+  .socials { gap: 6px; }
+  .socialLink { width: 30px; height: 30px; }
+}
