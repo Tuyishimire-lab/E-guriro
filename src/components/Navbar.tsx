@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useWishlist } from '@/context/WishlistContext';
 import {
   UilShoppingCart, UilSearch, UilUser, UilBars, UilTimes,
   UilAngleDown, UilSignOutAlt, UilStore, UilHeart,
@@ -13,6 +14,7 @@ import styles from './Navbar.module.css';
 export default function Navbar() {
   const { totalItems } = useCart();
   const { user, logout } = useAuth();
+  const { count: wishlistCount } = useWishlist();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +40,7 @@ export default function Navbar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
     }
   };
 
@@ -87,6 +89,16 @@ export default function Navbar() {
               <span className={styles.cartBadge}>{totalItems > 99 ? '99+' : totalItems}</span>
             )}
           </Link>
+
+          {/* Wishlist - buyers only */}
+          {user?.role === 'buyer' && (
+            <Link href="/buyer/wishlist" className={styles.cartBtn} id="wishlist-nav-btn" aria-label="Wishlist">
+              <UilHeart size="22" />
+              {wishlistCount > 0 && (
+                <span className={styles.cartBadge}>{wishlistCount > 99 ? '99+' : wishlistCount}</span>
+              )}
+            </Link>
+          )}
 
           {/* Chat */}
           <Link href="/chat" className={styles.iconBtn} id="chat-nav-btn" aria-label="Messages">

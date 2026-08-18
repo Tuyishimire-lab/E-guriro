@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { useWishlist } from '@/context/WishlistContext';
 import { formatRWF } from '@/lib/constants';
 import type { ProductSpec } from '@/lib/constants';
 import { UilShoppingCart, UilHeart, UilStar, UilShieldCheck } from '@/components/Icons';
@@ -61,9 +62,10 @@ export default function ProductCard({
   stock = 99, sellerId = '', condition, warranty, specs, brand,
 }: ProductCardProps) {
   const { addToCart } = useCart();
+  const { toggle, isWishlisted } = useWishlist();
+  const wishlisted = isWishlisted(id);
   const discount = originalPrice ? Math.round((1 - price / originalPrice) * 100) : 0;
   const topSpecs = getTopSpecs(specs);
-  const [wishlisted, setWishlisted] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -89,8 +91,8 @@ export default function ProductCard({
         {discount > 0 && <span className={styles.discountBadge}>-{discount}%</span>}
         <button
           className={`${styles.wishlistBtn} ${wishlisted ? styles.wishlisted : ''}`}
-          onClick={e => { e.preventDefault(); e.stopPropagation(); setWishlisted(w => !w); }}
-          aria-label="Add to wishlist"
+          onClick={e => { e.preventDefault(); e.stopPropagation(); toggle(id); }}
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           id={`wishlist-${id}`}
         >
           <UilHeart size="18" />

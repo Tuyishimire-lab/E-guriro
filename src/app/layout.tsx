@@ -1,8 +1,9 @@
-﻿import type { Metadata, Viewport } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import PublicShell from '@/components/PublicShell';
 import { CartProvider } from '@/context/CartContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { WishlistProvider } from '@/context/WishlistContext';
 
 export const metadata: Metadata = {
   title: "E-guriro | Rwanda's #1 Electronics & Phone Store",
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           <CartProvider>
-            <PublicShell>{children}</PublicShell>
+            <WishlistProvider>
+              <PublicShell>{children}</PublicShell>
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
       </body>

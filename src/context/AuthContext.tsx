@@ -52,7 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
  const found = MOCK_USERS.find(u =>u.email === email);
  if (!found) throw new Error('Invalid email or password');
  setUser(found);
+ const encoded = encodeURIComponent(JSON.stringify(found));
  localStorage.setItem('eguriro-user', JSON.stringify(found));
+ document.cookie = `eguriro-user=${encoded}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
  };
 
  const register = async (data: RegisterData) =>{
@@ -66,12 +68,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
  district: data.district,
  };
  setUser(newUser);
+ const encoded = encodeURIComponent(JSON.stringify(newUser));
  localStorage.setItem('eguriro-user', JSON.stringify(newUser));
+ document.cookie = `eguriro-user=${encoded}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
  };
 
  const logout = () =>{
  setUser(null);
  localStorage.removeItem('eguriro-user');
+ document.cookie = 'eguriro-user=; path=/; max-age=0';
  };
 
  return (
