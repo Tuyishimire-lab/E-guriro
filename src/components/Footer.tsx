@@ -138,8 +138,7 @@ export default function Footer() {
 
       {/*  FOOTER BOTTOM BAR  */}
       <div className={styles.footerBottom}>
-        <div className="container">
-          <div className={styles.bottomInner}>
+        <div className={styles.bottomInner}>
             <p className={styles.copyright}>
               &copy; {new Date().getFullYear()} E-guriro Ltd. All rights reserved. &nbsp;|&nbsp; Kigali, Rwanda
             </p>
@@ -156,7 +155,6 @@ export default function Footer() {
               <a href="https://wa.me/250788000000" target="_blank" rel="noopener noreferrer"
                 className={styles.socialLink} aria-label="WhatsApp">W</a>
             </div>
-          </div>
         </div>
       </div>
 

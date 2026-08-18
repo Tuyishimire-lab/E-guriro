@@ -14,7 +14,7 @@
   display: grid;
   grid-template-columns: 1.6fr 2.4fr;
   gap: var(--space-3xl);
-  padding: 56px 0 44px;
+  padding: 56px 64px 44px;
 }
 
 /* 
@@ -165,6 +165,13 @@
   background: var(--bg-primary);
 }
 
+/* Give the bottom bar explicit horizontal padding too */
+.footerBottom .bottomInner {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding-inline: 64px;
+}
+
 .bottomInner {
   display: flex;
   align-items: center;
@@ -215,12 +222,18 @@
 /* 
    RESPONSIVE
 */
+@media (max-width: 1200px) {
+  .footerInner { padding-inline: 48px; }
+  .footerBottom .bottomInner { padding-inline: 48px; }
+}
+
 @media (max-width: 1024px) {
   .footerInner {
     grid-template-columns: 1fr;
     gap: var(--space-2xl);
-    padding: 44px 0 36px;
+    padding: 44px 36px 36px;
   }
+  .footerBottom .bottomInner { padding-inline: 36px; }
   .tagline { max-width: 100%; }
   .linksGrid { grid-template-columns: repeat(4, 1fr); }
 }
@@ -229,7 +242,8 @@
   .linksGrid { grid-template-columns: repeat(2, 1fr); gap: var(--space-lg); }
   .bottomInner { flex-direction: column; gap: var(--space-sm); text-align: center; }
   .bottomTagline { display: none; }
-  .footerInner { padding: 36px 0 28px; }
+  .footerInner { padding: 36px 20px 28px; }
+  .footerBottom .bottomInner { padding-inline: 20px; }
   .trustBadges { gap: 6px; }
   .contactBlock { flex-direction: column; }
 }
@@ -240,7 +254,8 @@
   .logo { font-size: 1.3rem; }
   .tagline { font-size: 0.82rem; }
   .link { font-size: 0.82rem; }
-  .footerInner { padding: 28px 0 20px; }
+  .footerInner { padding: 28px 14px 20px; }
+  .footerBottom .bottomInner { padding-inline: 14px; }
   .socials { gap: 6px; }
   .socialLink { width: 30px; height: 30px; }
 }
