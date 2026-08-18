@@ -53,7 +53,10 @@ const QUICK_REPLIES = [
 // ─── Emoji picker (minimal) ─────────────────────────────────────────────────
 const EMOJIS = ['😊', '👍', '🙏', '✅', '🔥', '💯', '❤️', '😂', '🤝', '📦', '💰', '🚚'];
 
-// ─── Mock data ──────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
+const SELLER_COLORS = ['#00A550','#3B82F6','#6366F1','#F59E0B','#EF4444','#8B5CF6','#06B6D4'];
+function sellerColor(id: string) { return SELLER_COLORS[id.charCodeAt(id.length - 1) % SELLER_COLORS.length]; }
+
 const INITIAL_CONVS: Conversation[] = [
   {
     id: 'conv1',
@@ -143,17 +146,111 @@ function StatusTick({ status }: { status: MsgStatus }) {
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function ChatPage() {
   const { user } = useAuth();
-  const [convs, setConvs]         = useState<Conversation[]>(INITIAL_CONVS);
-  const [activeId, setActiveId]   = useState('conv1');
-  const [input, setInput]         = useState('');
-  const [search, setSearch]       = useState('');
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [showQuick, setShowQuick] = useState(false);
-  const [mobileSide, setMobileSide] = useState(false);  // mobile: show sidebar
-  const messagesEndRef            = useRef<HTMLDivElement>(null);
-  const inputRef                  = useRef<HTMLInputElement>(null);
+  const [convs, setConvs]           = useState<Conversation[]>(INITIAL_CONVS);
+  const [activeId, setActiveId]     = useState<string>('');
+  const [messages, setMessages]     = useState<Message[]>([]);
+  const [input, setInput]           = useState('');
+  const [search, setSearch]         = useState('');
+  const [showEmoji, setShowEmoji]   = useState(false);
+  const [showQuick, setShowQuick]   = useState(false);
+  const [mobileSide, setMobileSide] = useState(false);
+  const [loadingConvs, setLoadingConvs] = useState(true);
+  const messagesEndRef              = useRef<HTMLDivElement>(null);
+  const inputRef                    = useRef<HTMLInputElement>(null);
+  const lastMsgTimeRef              = useRef<string | null>(null);
+  const pollRef                     = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Load conversations ─────────────────────────────────────────────────────
+  useEffect(() => {
+    async function loadConvs() {
+      setLoadingConvs(true);
+      try {
+        const res = await fetch('/api/messages');
+        if (!res.ok) return;
+        const data = await res.json();
+        const mapped: Conversation[] = data.map((c: {
+          id: string; sellerId: string; buyerId: string;
+          participantNames: Record<string, string>;
+          productId?: string; productTitle?: string;
+          lastMessage: string; lastMessageAt: string; unreadCount: number;
+        }) => {
+          const isbuyer = user?.uid === c.buyerId;
+          const otherId = isbuyer ? c.sellerId : c.buyerId;
+          const otherName = c.participantNames?.[otherId] ?? (isbuyer ? 'Seller' : 'Buyer');
+          return {
+            id:            c.id,
+            sellerId:      c.sellerId,
+            sellerName:    otherName,
+            sellerInitial: otherName.charAt(0).toUpperCase(),
+            sellerColor:   sellerColor(otherId),
+            product:       c.productTitle ?? 'Product',
+            productId:     c.productId ?? '',
+            productImage:  'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=80',
+            productPrice:  '',
+            lastMessage:   c.lastMessage,
+            unread:        c.unreadCount,
+            time:          fmtDate(new Date(c.lastMessageAt)),
+            online:        false,
+            typing:        false,
+            messages:      [],
+          } satisfies Conversation;
+        });
+        setConvs(mapped);
+        if (mapped.length > 0) setActiveId(mapped[0].id);
+      } finally { setLoadingConvs(false); }
+    }
+    loadConvs();
+  }, [user?.uid]);
+
+  // ── Load messages for active conversation ──────────────────────────────────
+  useEffect(() => {
+    if (!activeId) return;
+    async function loadMessages() {
+      const res = await fetch(`/api/messages/${activeId}`);
+      if (!res.ok) return;
+      const data: { id: string; senderId: string; senderName: string; content: string; sentAt: string }[] = await res.json();
+      const msgs: Message[] = data.map(m => ({
+        id:        m.id,
+        from:      m.senderId,
+        fromName:  m.senderName,
+        text:      m.content,
+        timestamp: new Date(m.sentAt),
+        status:    'read' as MsgStatus,
+      }));
+      setMessages(msgs);
+      if (msgs.length > 0) lastMsgTimeRef.current = msgs[msgs.length - 1].timestamp.toISOString();
+    }
+    loadMessages();
+  }, [activeId]);
+
+  // ── 3-second polling for new messages ─────────────────────────────────────
+  useEffect(() => {
+    if (!activeId) return;
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      const since = lastMsgTimeRef.current;
+      if (!since) return;
+      const res = await fetch(`/api/messages/${activeId}?since=${encodeURIComponent(since)}`);
+      if (!res.ok) return;
+      const newMsgs: { id: string; senderId: string; senderName: string; content: string; sentAt: string }[] = await res.json();
+      if (newMsgs.length === 0) return;
+      const mapped: Message[] = newMsgs.map(m => ({
+        id:        m.id,
+        from:      m.senderId,
+        fromName:  m.senderName,
+        text:      m.content,
+        timestamp: new Date(m.sentAt),
+        status:    'delivered' as MsgStatus,
+      }));
+      setMessages(prev => [...prev, ...mapped]);
+      lastMsgTimeRef.current = mapped[mapped.length - 1].timestamp.toISOString();
+    }, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [activeId]);
 
   const active = convs.find(c => c.id === activeId) ?? convs[0];
+  // Merge DB messages into active conversation shape
+  const activeWithMessages: Conversation | undefined = active ? { ...active, messages } : undefined;
   const filteredConvs = convs.filter(c =>
     c.sellerName.toLowerCase().includes(search.toLowerCase()) ||
     c.product.toLowerCase().includes(search.toLowerCase())
@@ -162,7 +259,7 @@ export default function ChatPage() {
   // Auto-scroll on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [active?.messages.length]);
+  }, [messages.length]);
 
   // Close emoji/quick panels on outside click
   useEffect(() => {
@@ -173,67 +270,54 @@ export default function ChatPage() {
 
   const selectConv = (id: string) => {
     setActiveId(id);
+    setMessages([]);
+    lastMsgTimeRef.current = null;
     setMobileSide(false);
-    // Mark as read
     setConvs(prev => prev.map(c => c.id === id ? { ...c, unread: 0 } : c));
+    // Mark read on server
+    const role = user?.role === 'seller' ? 'seller' : 'buyer';
+    fetch(`/api/messages/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    }).catch(() => {});
   };
 
-  const sendMessage = useCallback((text: string) => {
-    if (!text.trim()) return;
-    const msg: Message = {
-      id: `m${Date.now()}`,
-      from: user?.uid || 'buyer1',
-      fromName: 'Me',
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || !activeId) return;
+    const optimistic: Message = {
+      id:        `opt-${Date.now()}`,
+      from:      user?.uid ?? 'me',
+      fromName:  'Me',
       text,
       timestamp: new Date(),
-      status: 'sending',
+      status:    'sending',
     };
-
-    setConvs(prev => prev.map(c =>
-      c.id === activeId ? { ...c, messages: [...c.messages, msg], lastMessage: text, unread: 0 } : c
-    ));
+    setMessages(prev => [...prev, optimistic]);
     setInput('');
     setShowEmoji(false);
     setShowQuick(false);
 
-    // Simulate "delivered" after 500ms
-    setTimeout(() => {
-      setConvs(prev => prev.map(c =>
-        c.id === activeId
-          ? { ...c, messages: c.messages.map(m => m.id === msg.id ? { ...m, status: 'delivered' } : m) }
-          : c
-      ));
-    }, 500);
-
-    // Simulate typing indicator
-    setTimeout(() => {
-      setConvs(prev => prev.map(c => c.id === activeId ? { ...c, typing: true } : c));
-    }, 1200);
-
-    // Simulate reply
-    setTimeout(() => {
-      const replies = [
-        'Thank you! We will get back to you shortly.',
-        'Sure! You can place your order directly on the platform.',
-        'Great question. Let me check that for you right away.',
-        'We have that in stock. Would you like to proceed?',
-        'Yes, delivery to your district takes 2-3 business days.',
-      ];
-      const reply: Message = {
-        id: `mr${Date.now()}`,
-        from: active.sellerId,
-        fromName: active.sellerName,
-        text: replies[Math.floor(Math.random() * replies.length)],
-        timestamp: new Date(),
-        status: 'delivered',
-      };
-      setConvs(prev => prev.map(c =>
-        c.id === activeId
-          ? { ...c, messages: [...c.messages, reply], lastMessage: reply.text, typing: false }
-          : c
-      ));
-    }, 2800);
-  }, [activeId, active, user]);
+    try {
+      const res = await fetch('/api/messages', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ convId: activeId, content: text }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setMessages(prev => prev.map(m =>
+          m.id === optimistic.id
+            ? { ...m, id: saved.id, status: 'delivered', timestamp: new Date(saved.sentAt) }
+            : m
+        ));
+        lastMsgTimeRef.current = new Date(saved.sentAt).toISOString();
+        setConvs(prev => prev.map(c => c.id === activeId ? { ...c, lastMessage: text } : c));
+      }
+    } catch {
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? { ...m, status: 'sent' } : m));
+    }
+  }, [activeId, user?.uid]);
 
   const handleSend = () => sendMessage(input);
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -398,9 +482,9 @@ export default function ChatPage() {
             {/* Date divider */}
             <div className={styles.dateDivider}><span>Today</span></div>
 
-            {active.messages.map((msg, idx) => {
-              const isMe = msg.from === (user?.uid || 'buyer1') || msg.fromName === 'Me';
-              const prevMsg = active.messages[idx - 1];
+            {messages.map((msg, idx) => {
+              const isMe = msg.from === user?.uid || msg.fromName === 'Me';
+              const prevMsg = messages[idx - 1];
               const sameAuthor = prevMsg && prevMsg.from === msg.from;
               return (
                 <div
