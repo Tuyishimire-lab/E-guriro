@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 import { useState } from 'react';
 import { formatRWF, MOCK_SELLERS } from '@/lib/constants';
-import { UilSearch, UilCheckCircle, UilTimesCircle, UilEye, UilStore, UilCheck, UilUserCheck } from '@/components/Icons';
+import { UilSearch, UilCheckCircle, UilTimesCircle, UilEye, UilStore, UilCheck } from '@/components/Icons';
 import styles from '../layout.module.css';
 
 const INITIAL_SELLERS = [

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -10,7 +10,16 @@ import {
 } from '@/components/Icons';
 import styles from './layout.module.css';
 
-const NAV = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: string | number; className?: string; style?: React.CSSProperties }>;
+  exact?: boolean;
+  badge?: number;
+}
+interface NavGroup { group: string; items: NavItem[]; }
+
+const NAV: NavGroup[] = [
   { group: 'Main', items: [{ href: '/admin', label: 'Dashboard', icon: UilHome, exact: true }] },
   { group: 'Catalog', items: [{ href: '/admin/products', label: 'Products', icon: UilPackage }, { href: '/admin/categories', label: 'Categories', icon: UilGrid }] },
   { group: 'People', items: [{ href: '/admin/sellers', label: 'Sellers', icon: UilStore, badge: 3 }, { href: '/admin/users', label: 'Buyers', icon: UilUser }] },

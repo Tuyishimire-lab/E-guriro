@@ -53,7 +53,7 @@ export default function WishlistPage() {
           className="btn btn-primary btn-sm"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           onClick={() => {
-            wishlisted.forEach(p => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, seller: p.seller, stock: 99 }));
+            wishlisted.forEach(p => addToCart({ id: p.id, title: p.title, price: p.price, image: p.image, seller: p.seller, sellerId: p.sellerId ?? '', stock: p.stock ?? 99 }));
           }}
         >
           <UilShoppingCart size="16" /> Move All to Cart

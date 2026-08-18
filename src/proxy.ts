@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Public routes inside /seller/** that anyone can visit (no auth needed)
+const PUBLIC_SELLER_PATTERNS = [
+  /^\/seller\/[^/]+\/store(\/|$)/,   // /seller/[id]/store — public storefront
+];
+
 // Routes that require a specific role stored in the auth cookie
 const PROTECTED: { pattern: RegExp; role: 'admin' | 'seller' | 'buyer' | 'any' }[] = [
   { pattern: /^\/admin(\/|$)/, role: 'admin' },
@@ -9,8 +14,13 @@ const PROTECTED: { pattern: RegExp; role: 'admin' | 'seller' | 'buyer' | 'any' }
   { pattern: /^\/checkout(\/|$)/, role: 'any' },
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Allow public seller sub-routes first (e.g. store pages)
+  if (PUBLIC_SELLER_PATTERNS.some(p => p.test(pathname))) {
+    return NextResponse.next();
+  }
 
   // Find the first matching protected route
   const match = PROTECTED.find(p => p.pattern.test(pathname));
