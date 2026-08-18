@@ -1,0 +1,318 @@
+/* =======================================================
+   SELLER STORE PAGE
+   ======================================================= */
+
+.page {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ---- Banner ---- */
+.banner {
+  background: linear-gradient(135deg, #070d1a 0%, #0d1f12 100%);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.bannerInner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 28px;
+  flex-wrap: wrap;
+}
+
+/* Avatar */
+.avatarWrap { position: relative; flex-shrink: 0; }
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--brand-green), #005e2f);
+  color: #fff;
+  font-size: 1.8rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(0,165,80,0.3);
+}
+
+.verifiedBadge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  background: var(--brand-green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 2px solid var(--bg-primary);
+}
+
+/* Store info */
+.storeInfo { flex: 1; min-width: 200px; }
+
+.storeNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.storeName {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.verifiedTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--brand-green);
+  background: rgba(0,165,80,0.12);
+  border: 1px solid rgba(0,165,80,0.25);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.storeSpecialty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 2px 0 10px;
+}
+
+.storeMeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.storeMeta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Actions */
+.storeActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---- KPI strip ---- */
+.kpiStrip {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 4px;
+  min-width: 100px;
+}
+
+.kpi strong {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.kpi span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.kpiDivider {
+  width: 1px;
+  height: 36px;
+  background: var(--border-color);
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+/* ---- Layout ---- */
+.content {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .content { grid-template-columns: 1fr; }
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  position: sticky;
+  top: 86px;
+}
+
+.sidebarTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+.catList { display: flex; flex-direction: column; gap: 3px; }
+
+.catBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.catBtn:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+.catBtnActive { background: rgba(0,165,80,0.1); color: var(--brand-green); font-weight: 700; }
+
+.catCount {
+  font-size: 0.7rem;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+.catBtnActive .catCount { background: rgba(0,165,80,0.2); color: var(--brand-green); }
+
+/* ---- Grid section ---- */
+.gridSection { display: flex; flex-direction: column; gap: 16px; }
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 8px 12px;
+  transition: border-color 0.2s;
+}
+.searchWrap:focus-within { border-color: var(--brand-green); }
+
+.searchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-family: inherit;
+}
+
+.sortSelect {
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.resultCount {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+.resultCount strong { color: var(--text-primary); }
+.resultCount em { color: var(--brand-green); font-style: normal; }
+
+/* ---- Product grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--space-lg);
+}
+
+/* ---- Empty state ---- */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+
+.emptySub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 640px) {
+  .bannerInner { padding: 20px 16px; }
+  .storeName { font-size: 1.15rem; }
+  .kpiStrip { padding: 14px 16px; }
+  .kpi strong { font-size: 1rem; }
+  .page { padding: 0 14px 60px; }
+}
