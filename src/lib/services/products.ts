@@ -7,8 +7,7 @@ import {
   query, where, orderBy, limit as fsLimit, serverTimestamp,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import type { Product } from '@/lib/types';
 
 const COL = 'products';
@@ -89,29 +88,18 @@ export async function getProductById(id: string): Promise<Product | null> {
 // ── createProduct ─────────────────────────────────────────────────────────────
 export async function createProduct(
   data: Omit<Product, 'id' | 'createdAt'>,
-  imageFiles?: File[]
+  imageUrls?: string[]   // CDN URLs already uploaded via /api/upload
 ): Promise<string> {
-  let imageUrl = data.image;
-  const imageUrls: string[] = [];
-
-  // Upload images to Firebase Storage if provided
-  if (imageFiles && imageFiles.length > 0) {
-    for (const file of imageFiles) {
-      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-      const snap = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snap.ref);
-      imageUrls.push(url);
-    }
-    imageUrl = imageUrls[0];
-  }
+  const urls = imageUrls ?? (data.images?.length ? data.images : [data.image]);
+  const primaryImage = urls[0] ?? data.image ?? '';
 
   const docRef = await addDoc(collection(db, COL), {
     ...data,
-    image:     imageUrl,
-    images:    imageUrls.length > 0 ? imageUrls : (data.images ?? []),
+    image:     primaryImage,
+    images:    urls,
     rating:    0,
     reviews:   0,
-    status:    'active',
+    status:    'pending',   // requires admin approval before going live
     createdAt: serverTimestamp(),
   });
 
