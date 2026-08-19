@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -120,25 +120,27 @@ export default function LoginPage() {
         {/* Divider */}
         <div className={styles.divider}><span>or sign in with email</span></div>
 
-        {/* Demo Logins */}
-        <div className={styles.demoSection}>
-          <p className={styles.demoLabel}>Quick Demo Login:</p>
-          <div className={styles.demoBtns}>
-            {demoLogins.map(d => (
-              <button
-                key={d.email}
-                className={styles.demoBtn}
-                style={{ borderColor: d.color, color: d.color }}
-                onClick={() => { setEmail(d.email); setPassword('demo123'); }}
-                type="button"
-                id={`demo-${d.email.split('@')[0]}`}
-              >
-                {d.icon}
-                {d.label}
-              </button>
-            ))}
+        {/* Demo Logins (Development only — stripped in production) */}
+        {process.env.NODE_ENV !== 'production' && (
+          <div className={styles.demoSection}>
+            <p className={styles.demoLabel}>Quick Demo Login (Dev Only):</p>
+            <div className={styles.demoBtns}>
+              {demoLogins.map(d => (
+                <button
+                  key={d.email}
+                  className={styles.demoBtn}
+                  style={{ borderColor: d.color, color: d.color }}
+                  onClick={() => { setEmail(d.email); setPassword('demo123'); }}
+                  type="button"
+                  id={`demo-${d.email.split('@')[0]}`}
+                >
+                  {d.icon}
+                  {d.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           {error && <div className="alert alert-error">{error}</div>}
