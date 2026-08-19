@@ -54,8 +54,9 @@ function OrderTracker({ status, isPickup }: { status: string; isPickup?: boolean
 
 interface Order {
   id: string;
-  items: { title: string; image?: string; qty: number; price: number }[];
+  items: { productId?: string; title: string; image?: string; qty: number; price: number; sellerId?: string }[];
   sellerName?: string;
+  sellerId?: string;
   total: number;
   status: string;
   createdAt: string;
@@ -229,8 +230,12 @@ export default function BuyerOrders() {
                       <OrderTracker status={order.status} isPickup={order.deliveryType === 'pickup_station'} />
                     </div>
                     <div className={styles.orderCardFooter}>
-                      <Link href="/chat" className="btn btn-ghost btn-sm" id={`chat-seller-${order.id}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Link
+                        href={`/chat?sellerId=${encodeURIComponent(firstItem?.sellerId || order.sellerId || 'seller1')}&sellerName=${encodeURIComponent(order.sellerName || 'Verified Seller')}&productId=${encodeURIComponent(firstItem?.productId || '')}&productTitle=${encodeURIComponent(firstItem?.title ? `Order #${order.id.slice(0, 8)} - ${firstItem.title}` : `Order #${order.id.slice(0, 8)}`)}`}
+                        className="btn btn-ghost btn-sm"
+                        id={`chat-seller-${order.id}`}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                      >
                         <UilComment size="15" /> Chat Seller
                       </Link>
                       {order.status === 'delivered' && (
