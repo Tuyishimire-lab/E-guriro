@@ -35,12 +35,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== 'seller' && session.role !== 'admin')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     const data = await req.json();
-    const id = await createProduct({ ...data, seller: session.name, sellerId: session.uid });
-    return NextResponse.json({ id }, { status: 201 });
+    const seller = session?.shopName || session?.name || data.seller || 'Seller';
+    const sellerId = session?.uid || data.sellerId || 'seller';
+    const id = await createProduct({
+      ...data,
+      seller,
+      sellerId,
+    }, data.images || [data.image]);
+    return NextResponse.json({ id, success: true }, { status: 201 });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

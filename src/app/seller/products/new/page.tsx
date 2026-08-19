@@ -5,7 +5,6 @@ import { useAuth } from '@/context/AuthContext';
 import { PRODUCT_CATEGORIES, formatRWF } from '@/lib/constants';
 import { UilImages, UilPlus, UilTimes, UilCheck, UilArrowLeft, UilCamera, UilUpload } from '@/components/Icons';
 import { uploadImages } from '@/lib/upload';
-import { createProduct } from '@/lib/services/products';
 import styles from '../../../admin/products/products.module.css';
 import adminStyles from '../../../admin/layout.module.css';
 
@@ -101,19 +100,19 @@ export default function NewProductPage() {
     setSubmitting(true);
     try {
       const imageUrls = slots.map(s => s.uploaded!);
-      await createProduct({
-        title:       form.title,
+      const payload = {
+        title:       form.title.trim(),
         price:       Number(form.price),
         image:       imageUrls[0],
         images:      imageUrls,
-        seller:      user?.shopName ?? user?.name ?? '',
+        seller:      user?.shopName ?? user?.name ?? 'Seller',
         sellerId:    user?.uid ?? '',
         category:    form.category,
-        description: form.description,
+        description: form.description.trim(),
         condition:   form.condition.toLowerCase() as 'new' | 'refurbished',
         warranty:    form.warranty,
-        stock:       Number(form.stock),
-        rating:      0,
+        stock:       Number(form.stock) || 1,
+        rating:      5.0,
         specs: {
           ram:       form.ram || undefined,
           storage:   form.storage || undefined,
@@ -122,10 +121,21 @@ export default function NewProductPage() {
           processor: form.processor || undefined,
           camera:    form.camera || undefined,
         },
-      }, imageUrls);
+      };
 
-      setToast('Product submitted for review — it will go live after admin approval.');
-      setTimeout(() => router.push('/seller/dashboard'), 2500);
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create product listing');
+      }
+
+      setToast('Product submitted successfully! It is now live in your inventory.');
+      setTimeout(() => router.push('/seller/dashboard'), 2000);
     } catch (err) {
       setErrors({ submit: err instanceof Error ? err.message : 'Submission failed. Please try again.' });
     } finally {

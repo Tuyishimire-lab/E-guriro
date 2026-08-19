@@ -1,12 +1,14 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
   UilMessage, UilSearch, UilStore, UilSmile, UilPhone,
   UilVideo, UilEllipsisV, UilCheck, UilCheckCircle, UilArrowLeft,
-  UilTimes, UilBolt, UilImage,
+  UilTimes, UilBolt, UilImage, UilShoppingCart,
 } from '@/components/Icons';
+import { uploadImage } from '@/lib/upload';
 import styles from './page.module.css';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -55,73 +57,10 @@ const EMOJIS = ['😊', '👍', '🙏', '✅', '🔥', '💯', '❤️', '😂',
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const SELLER_COLORS = ['#00A550','#3B82F6','#6366F1','#F59E0B','#EF4444','#8B5CF6','#06B6D4'];
-function sellerColor(id: string) { return SELLER_COLORS[id.charCodeAt(id.length - 1) % SELLER_COLORS.length]; }
-
-const INITIAL_CONVS: Conversation[] = [
-  {
-    id: 'conv1',
-    sellerId: 'seller1',
-    sellerName: 'TechHub Kigali',
-    sellerInitial: 'T',
-    sellerColor: '#00A550',
-    product: 'Samsung Galaxy A54 5G',
-    productId: '2',
-    productImage: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=80',
-    productPrice: 'RWF 350,000',
-    lastMessage: 'Yes, we have 15 units in stock!',
-    unread: 2,
-    time: '12:16',
-    online: true,
-    typing: false,
-    messages: [
-      { id: 'm1', from: 'buyer1', fromName: 'Me', text: 'Hello, do you deliver to Musanze district?', timestamp: new Date(Date.now() - 600000), status: 'read' },
-      { id: 'm2', from: 'seller1', fromName: 'TechHub Kigali', text: 'Hello! Yes, we deliver to Musanze. Delivery cost is RWF 3,000 and takes 3-5 days.', timestamp: new Date(Date.now() - 540000), status: 'read' },
-      { id: 'm3', from: 'buyer1', fromName: 'Me', text: 'Great! Is the Samsung Galaxy A54 still available?', timestamp: new Date(Date.now() - 480000), status: 'read' },
-      { id: 'm4', from: 'seller1', fromName: 'TechHub Kigali', text: 'Yes, we currently have 15 units in stock. Would you like to place an order?', timestamp: new Date(Date.now() - 420000), status: 'delivered' },
-      { id: 'm5', from: 'seller1', fromName: 'TechHub Kigali', text: 'Yes, we deliver to Musanze. Cost is RWF 3,000.', timestamp: new Date(Date.now() - 300000), status: 'delivered' },
-    ],
-  },
-  {
-    id: 'conv2',
-    sellerId: 'seller2',
-    sellerName: 'PhoneZone Rwanda',
-    sellerInitial: 'P',
-    sellerColor: '#3B82F6',
-    product: 'Infinix Hot 40 Pro',
-    productId: '5',
-    productImage: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=80',
-    productPrice: 'RWF 120,000',
-    lastMessage: 'We can offer a 5% discount for cash payment.',
-    unread: 0,
-    time: 'Yesterday',
-    online: false,
-    typing: false,
-    messages: [
-      { id: 'm1', from: 'buyer1', fromName: 'Me', text: 'Hi, is there a discount on the Infinix Hot 40 Pro?', timestamp: new Date(Date.now() - 86400000), status: 'read' },
-      { id: 'm2', from: 'seller2', fromName: 'PhoneZone Rwanda', text: 'We can offer a 5% discount for cash payment. Interested?', timestamp: new Date(Date.now() - 85000000), status: 'read' },
-    ],
-  },
-  {
-    id: 'conv3',
-    sellerId: 'seller3',
-    sellerName: 'iStore Kigali',
-    sellerInitial: 'i',
-    sellerColor: '#6366F1',
-    product: 'iPhone 15 Pro 256GB',
-    productId: '3',
-    productImage: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=80',
-    productPrice: 'RWF 1,450,000',
-    lastMessage: 'The iPhone 15 Pro comes with a 1-year warranty.',
-    unread: 1,
-    time: 'Mon',
-    online: true,
-    typing: false,
-    messages: [
-      { id: 'm1', from: 'buyer1', fromName: 'Me', text: 'What warranty does the iPhone 15 Pro come with?', timestamp: new Date(Date.now() - 172800000), status: 'read' },
-      { id: 'm2', from: 'seller3', fromName: 'iStore Kigali', text: 'The iPhone 15 Pro comes with a 1-year manufacturer warranty. We also offer extended warranty plans.', timestamp: new Date(Date.now() - 172000000), status: 'delivered' },
-    ],
-  },
-];
+function sellerColor(id: string) {
+  if (!id) return '#00A550';
+  return SELLER_COLORS[id.charCodeAt(id.length - 1) % SELLER_COLORS.length];
+}
 
 function fmtTime(d: Date): string {
   return d.toLocaleTimeString('en-RW', { hour: '2-digit', minute: '2-digit' });
@@ -143,114 +82,185 @@ function StatusTick({ status }: { status: MsgStatus }) {
   return <span style={{ display: 'inline-flex', color: '#60a5fa' }}><UilCheck size="11" /><UilCheck size="11" style={{ marginLeft: -4 }} /></span>;
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
-export default function ChatPage() {
+// ─── Chat Content ───────────────────────────────────────────────────────────
+function ChatContent() {
   const { user } = useAuth();
-  const [convs, setConvs]           = useState<Conversation[]>(INITIAL_CONVS);
-  const [activeId, setActiveId]     = useState<string>('');
-  const [messages, setMessages]     = useState<Message[]>([]);
-  const [input, setInput]           = useState('');
-  const [search, setSearch]         = useState('');
-  const [showEmoji, setShowEmoji]   = useState(false);
-  const [showQuick, setShowQuick]   = useState(false);
-  const [mobileSide, setMobileSide] = useState(false);
-  const [loadingConvs, setLoadingConvs] = useState(true);
-  const messagesEndRef              = useRef<HTMLDivElement>(null);
-  const inputRef                    = useRef<HTMLInputElement>(null);
-  const lastMsgTimeRef              = useRef<string | null>(null);
-  const pollRef                     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const searchParams = useSearchParams();
 
-  // ── Load conversations ─────────────────────────────────────────────────────
+  const [convs, setConvs]               = useState<Conversation[]>([]);
+  const [activeId, setActiveId]         = useState<string>('');
+  const [messages, setMessages]         = useState<Message[]>([]);
+  const [input, setInput]               = useState('');
+  const [search, setSearch]             = useState('');
+  const [showEmoji, setShowEmoji]       = useState(false);
+  const [showQuick, setShowQuick]       = useState(false);
+  const [mobileSide, setMobileSide]     = useState(false);
+  const [loadingConvs, setLoadingConvs] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const messagesEndRef                  = useRef<HTMLDivElement>(null);
+  const inputRef                        = useRef<HTMLInputElement>(null);
+  const fileInputRef                    = useRef<HTMLInputElement>(null);
+  const lastMsgTimeRef                  = useRef<string | null>(null);
+  const pollRef                         = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Load or Create Conversation on Mount ──────────────────────────────────
   useEffect(() => {
-    async function loadConvs() {
+    async function initChat() {
       setLoadingConvs(true);
       try {
-        const res = await fetch('/api/messages');
-        if (!res.ok) return;
-        const data = await res.json();
-        const mapped: Conversation[] = data.map((c: {
-          id: string; sellerId: string; buyerId: string;
-          participantNames: Record<string, string>;
-          productId?: string; productTitle?: string;
-          lastMessage: string; lastMessageAt: string; unreadCount: number;
-        }) => {
-          const isbuyer = user?.uid === c.buyerId;
-          const otherId = isbuyer ? c.sellerId : c.buyerId;
-          const otherName = c.participantNames?.[otherId] ?? (isbuyer ? 'Seller' : 'Buyer');
-          return {
-            id:            c.id,
-            sellerId:      c.sellerId,
-            sellerName:    otherName,
-            sellerInitial: otherName.charAt(0).toUpperCase(),
-            sellerColor:   sellerColor(otherId),
-            product:       c.productTitle ?? 'Product',
-            productId:     c.productId ?? '',
-            productImage:  'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=80',
-            productPrice:  '',
-            lastMessage:   c.lastMessage,
-            unread:        c.unreadCount,
-            time:          fmtDate(new Date(c.lastMessageAt)),
-            online:        false,
-            typing:        false,
-            messages:      [],
-          } satisfies Conversation;
-        });
-        setConvs(mapped);
-        if (mapped.length > 0) setActiveId(mapped[0].id);
-      } finally { setLoadingConvs(false); }
+        const targetSellerId    = searchParams.get('sellerId');
+        const targetSellerName  = searchParams.get('sellerName') || 'Verified Seller';
+        const targetProductId   = searchParams.get('productId');
+        const targetProductTitle = searchParams.get('productTitle') || 'Product Inquiry';
+
+        let targetConvId: string | null = null;
+
+        // If query parameters provided (e.g. from Product page), initiate or fetch that conversation
+        if (targetSellerId && user) {
+          try {
+            const createRes = await fetch('/api/messages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sellerId: targetSellerId,
+                sellerName: targetSellerName,
+                productId: targetProductId || undefined,
+                productTitle: targetProductTitle || undefined,
+                senderId: user.uid,
+                senderName: user.name || 'Shopper',
+              }),
+            });
+            if (createRes.ok) {
+              const resData = await createRes.json();
+              targetConvId = resData.convId;
+            }
+          } catch (e) {
+            console.error('Failed to initiate targeted conversation', e);
+          }
+        }
+
+        // Fetch all user conversations from Postgres
+        const res = await fetch(`/api/messages?userId=${user?.uid || ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: Conversation[] = (data || []).map((c: {
+            id: string; sellerId: string; buyerId: string;
+            participantNames: Record<string, string>;
+            productId?: string; productTitle?: string;
+            lastMessage: string; lastMessageAt: string; unreadCount: number;
+          }) => {
+            const isbuyer = user?.uid === c.buyerId;
+            const otherId = isbuyer ? c.sellerId : c.buyerId;
+            const otherName = c.participantNames?.[otherId] ?? (isbuyer ? 'Seller' : 'Buyer');
+            return {
+              id:            c.id,
+              sellerId:      c.sellerId,
+              sellerName:    otherName,
+              sellerInitial: otherName.charAt(0).toUpperCase() || 'S',
+              sellerColor:   sellerColor(otherId),
+              product:       c.productTitle ?? 'Product Inquiry',
+              productId:     c.productId ?? '',
+              productImage:  'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=80',
+              productPrice:  '',
+              lastMessage:   c.lastMessage || 'Conversation started',
+              unread:        c.unreadCount || 0,
+              time:          c.lastMessageAt ? fmtDate(new Date(c.lastMessageAt)) : 'Just now',
+              online:        false,
+              typing:        false,
+              messages:      [],
+            } satisfies Conversation;
+          });
+
+          setConvs(mapped);
+
+          if (targetConvId) {
+            setActiveId(targetConvId);
+          } else if (mapped.length > 0) {
+            setActiveId(mapped[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load chat conversations', err);
+      } finally {
+        setLoadingConvs(false);
+      }
     }
-    loadConvs();
-  }, [user?.uid]);
+    initChat();
+  }, [user?.uid, searchParams]);
 
   // ── Load messages for active conversation ──────────────────────────────────
   useEffect(() => {
     if (!activeId) return;
     async function loadMessages() {
-      const res = await fetch(`/api/messages/${activeId}`);
-      if (!res.ok) return;
-      const data: { id: string; senderId: string; senderName: string; content: string; sentAt: string }[] = await res.json();
-      const msgs: Message[] = data.map(m => ({
-        id:        m.id,
-        from:      m.senderId,
-        fromName:  m.senderName,
-        text:      m.content,
-        timestamp: new Date(m.sentAt),
-        status:    'read' as MsgStatus,
-      }));
-      setMessages(msgs);
-      if (msgs.length > 0) lastMsgTimeRef.current = msgs[msgs.length - 1].timestamp.toISOString();
+      try {
+        const res = await fetch(`/api/messages/${activeId}`);
+        if (!res.ok) return;
+        const data: { id: string; senderId: string; senderName: string; content: string; image_url?: string; sentAt: string }[] = await res.json();
+        const msgs: Message[] = (data || []).map(m => ({
+          id:        m.id,
+          from:      m.senderId,
+          fromName:  m.senderName,
+          text:      m.content,
+          image:     m.image_url,
+          timestamp: new Date(m.sentAt),
+          status:    'read' as MsgStatus,
+        }));
+        setMessages(msgs);
+        if (msgs.length > 0) {
+          lastMsgTimeRef.current = msgs[msgs.length - 1].timestamp.toISOString();
+        }
+      } catch (err) {
+        console.error('Failed to load messages for conversation', err);
+      }
     }
     loadMessages();
   }, [activeId]);
 
-  // ── 3-second polling for new messages ─────────────────────────────────────
+  // ── 3-second polling for new messages on Vercel ────────────────────────────
   useEffect(() => {
     if (!activeId) return;
     if (pollRef.current) clearInterval(pollRef.current);
+
     pollRef.current = setInterval(async () => {
       const since = lastMsgTimeRef.current;
       if (!since) return;
-      const res = await fetch(`/api/messages/${activeId}?since=${encodeURIComponent(since)}`);
-      if (!res.ok) return;
-      const newMsgs: { id: string; senderId: string; senderName: string; content: string; sentAt: string }[] = await res.json();
-      if (newMsgs.length === 0) return;
-      const mapped: Message[] = newMsgs.map(m => ({
-        id:        m.id,
-        from:      m.senderId,
-        fromName:  m.senderName,
-        text:      m.content,
-        timestamp: new Date(m.sentAt),
-        status:    'delivered' as MsgStatus,
-      }));
-      setMessages(prev => [...prev, ...mapped]);
-      lastMsgTimeRef.current = mapped[mapped.length - 1].timestamp.toISOString();
+      try {
+        const res = await fetch(`/api/messages/${activeId}?since=${encodeURIComponent(since)}`);
+        if (!res.ok) return;
+        const newMsgs: { id: string; senderId: string; senderName: string; content: string; image_url?: string; sentAt: string }[] = await res.json();
+        if (!newMsgs || newMsgs.length === 0) return;
+
+        const mapped: Message[] = newMsgs.map(m => ({
+          id:        m.id,
+          from:      m.senderId,
+          fromName:  m.senderName,
+          text:      m.content,
+          image:     m.image_url,
+          timestamp: new Date(m.sentAt),
+          status:    'delivered' as MsgStatus,
+        }));
+
+        setMessages(prev => {
+          // Deduplicate by message ID
+          const existingIds = new Set(prev.map(p => p.id));
+          const filtered = mapped.filter(m => !existingIds.has(m.id));
+          if (filtered.length === 0) return prev;
+          return [...prev, ...filtered];
+        });
+
+        lastMsgTimeRef.current = mapped[mapped.length - 1].timestamp.toISOString();
+      } catch (e) {
+        console.error('Polling error', e);
+      }
     }, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [activeId]);
 
-  const active = convs.find(c => c.id === activeId) ?? convs[0];
-  // Merge DB messages into active conversation shape
-  const activeWithMessages: Conversation | undefined = active ? { ...active, messages } : undefined;
+  const active = convs.find(c => c.id === activeId);
   const filteredConvs = convs.filter(c =>
     c.sellerName.toLowerCase().includes(search.toLowerCase()) ||
     c.product.toLowerCase().includes(search.toLowerCase())
@@ -274,22 +284,24 @@ export default function ChatPage() {
     lastMsgTimeRef.current = null;
     setMobileSide(false);
     setConvs(prev => prev.map(c => c.id === id ? { ...c, unread: 0 } : c));
+
     // Mark read on server
     const role = user?.role === 'seller' ? 'seller' : 'buyer';
     fetch(`/api/messages/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ role, userId: user?.uid }),
     }).catch(() => {});
   };
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || !activeId) return;
+  const sendMessage = useCallback(async (text: string, imageUrl?: string) => {
+    if ((!text.trim() && !imageUrl) || !activeId) return;
     const optimistic: Message = {
       id:        `opt-${Date.now()}`,
       from:      user?.uid ?? 'me',
-      fromName:  'Me',
-      text,
+      fromName:  user?.name ?? 'Me',
+      text:      text.trim(),
+      image:     imageUrl,
       timestamp: new Date(),
       status:    'sending',
     };
@@ -302,7 +314,13 @@ export default function ChatPage() {
       const res = await fetch('/api/messages', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ convId: activeId, content: text }),
+        body:    JSON.stringify({
+          convId: activeId,
+          content: text.trim(),
+          imageUrl,
+          senderId: user?.uid,
+          senderName: user?.name,
+        }),
       });
       if (res.ok) {
         const saved = await res.json();
@@ -312,16 +330,31 @@ export default function ChatPage() {
             : m
         ));
         lastMsgTimeRef.current = new Date(saved.sentAt).toISOString();
-        setConvs(prev => prev.map(c => c.id === activeId ? { ...c, lastMessage: text } : c));
+        setConvs(prev => prev.map(c => c.id === activeId ? { ...c, lastMessage: text.trim() || 'Photo' } : c));
       }
     } catch {
       setMessages(prev => prev.map(m => m.id === optimistic.id ? { ...m, status: 'sent' } : m));
     }
-  }, [activeId, user?.uid]);
+  }, [activeId, user?.uid, user?.name]);
 
   const handleSend = () => sendMessage(input);
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadImage(file);
+      await sendMessage('', url);
+    } catch (err) {
+      console.error('Failed to attach image', err);
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const appendEmoji = (emoji: string) => {
@@ -365,257 +398,281 @@ export default function ChatPage() {
 
           {/* Conversation list */}
           <div className={styles.convList}>
-            {filteredConvs.length === 0 && (
-              <p style={{ padding: '24px 16px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
-                No conversations found
-              </p>
+            {loadingConvs ? (
+              <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                Loading conversations...
+              </div>
+            ) : filteredConvs.length === 0 ? (
+              <div style={{ padding: 32, color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>
+                <p>No conversations yet.</p>
+                <Link href="/products" className="btn btn-ghost btn-xs" style={{ marginTop: 8 }}>
+                  Explore Products
+                </Link>
+              </div>
+            ) : (
+              filteredConvs.map(conv => (
+                <button
+                  key={conv.id}
+                  className={`${styles.convItem} ${activeId === conv.id ? styles.convItemActive : ''}`}
+                  onClick={() => selectConv(conv.id)}
+                  id={`conv-${conv.id}`}
+                >
+                  {/* Avatar with online dot */}
+                  <div className={styles.convAvatarWrap}>
+                    <div className={styles.convAvatar} style={{ background: conv.sellerColor }}>
+                      {conv.sellerInitial}
+                    </div>
+                    {conv.online && <span className={styles.onlineDot} />}
+                  </div>
+
+                  <div className={styles.convMeta}>
+                    <div className={styles.convRow}>
+                      <span className={styles.convName}>{conv.sellerName}</span>
+                      <span className={styles.convTime}>{conv.time}</span>
+                    </div>
+                    <span className={styles.convProduct}>Re: {conv.product}</span>
+                    <span className={`${styles.convLast} ${conv.unread > 0 ? styles.convLastUnread : ''}`}>
+                      {conv.lastMessage}
+                    </span>
+                  </div>
+
+                  {conv.unread > 0 && (
+                    <span className={styles.unreadBadge}>{conv.unread}</span>
+                  )}
+                </button>
+              ))
             )}
-            {filteredConvs.map(conv => (
-              <button
-                key={conv.id}
-                className={`${styles.convItem} ${activeId === conv.id ? styles.convItemActive : ''}`}
-                onClick={() => selectConv(conv.id)}
-                id={`conv-${conv.id}`}
-              >
-                {/* Avatar with online dot */}
-                <div className={styles.convAvatarWrap}>
-                  <div className={styles.convAvatar} style={{ background: conv.sellerColor }}>
-                    {conv.sellerInitial}
-                  </div>
-                  {conv.online && <span className={styles.onlineDot} />}
-                </div>
-
-                <div className={styles.convMeta}>
-                  <div className={styles.convRow}>
-                    <span className={styles.convName}>{conv.sellerName}</span>
-                    <span className={styles.convTime}>{conv.time}</span>
-                  </div>
-                  <span className={styles.convProduct}>Re: {conv.product}</span>
-                  <span className={`${styles.convLast} ${conv.unread > 0 ? styles.convLastUnread : ''}`}>
-                    {conv.typing ? (
-                      <span className={styles.typingPreview}>typing...</span>
-                    ) : conv.lastMessage}
-                  </span>
-                </div>
-
-                {conv.unread > 0 && (
-                  <span className={styles.unreadBadge}>{conv.unread}</span>
-                )}
-              </button>
-            ))}
           </div>
         </aside>
 
         {/* ============ CHAT WINDOW ============ */}
         <div className={styles.chatWindow}>
+          {active ? (
+            <>
+              {/* ---- Header ---- */}
+              <div className={styles.chatHeader}>
+                {/* Mobile back */}
+                <button className={styles.mobileBackBtn} onClick={() => setMobileSide(true)} aria-label="Back to conversations">
+                  <UilArrowLeft size="20" />
+                </button>
 
-          {/* ---- Header ---- */}
-          <div className={styles.chatHeader}>
-            {/* Mobile back */}
-            <button className={styles.mobileBackBtn} onClick={() => setMobileSide(true)} aria-label="Back to conversations">
-              <UilArrowLeft size="20" />
-            </button>
+                {/* Seller info */}
+                <div className={styles.headerAvatarWrap}>
+                  <div className={styles.headerAvatar} style={{ background: active.sellerColor }}>
+                    {active.sellerInitial}
+                  </div>
+                  {active.online && <span className={styles.onlineDotLg} />}
+                </div>
 
-            {/* Seller info */}
-            <div className={styles.headerAvatarWrap}>
-              <div className={styles.headerAvatar} style={{ background: active.sellerColor }}>
-                {active.sellerInitial}
+                <div className={styles.headerInfo}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <strong className={styles.headerName}>{active.sellerName}</strong>
+                    <span className={styles.verifiedTag}>
+                      <UilCheckCircle size="11" /> Verified
+                    </span>
+                  </div>
+                  <p className={styles.headerSub}>
+                    {active.online ? <span className={styles.onlineText}>Online</span> : 'Direct Store Messaging'}
+                  </p>
+                </div>
+
+                {/* Header actions */}
+                <div className={styles.headerActions}>
+                  {active.sellerId && (
+                    <Link
+                      href={`/seller/${active.sellerId}/store`}
+                      className={`btn btn-ghost btn-xs ${styles.viewStoreBtn}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <UilStore size="13" /> View Store
+                    </Link>
+                  )}
+                </div>
               </div>
-              {active.online && <span className={styles.onlineDotLg} />}
-            </div>
 
-            <div className={styles.headerInfo}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <strong className={styles.headerName}>{active.sellerName}</strong>
-                <span className={styles.verifiedTag}>
-                  <UilCheckCircle size="11" /> Verified
-                </span>
-              </div>
-              <p className={styles.headerSub}>
-                {convs.find(c => c.id === activeId)?.typing
-                  ? <span className={styles.typingText}>typing...</span>
-                  : active.online ? <span className={styles.onlineText}>Online now</span> : 'Last seen recently'
-                }
-              </p>
-            </div>
-
-            {/* Header actions */}
-            <div className={styles.headerActions}>
-              <Link
-                href={`/seller/${active.sellerId}/store`}
-                className={`btn btn-ghost btn-xs ${styles.viewStoreBtn}`}
-                style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                <UilStore size="13" /> View Store
-              </Link>
-              <button className={styles.headerIconBtn} title="Voice call" aria-label="Call seller">
-                <UilPhone size="17" />
-              </button>
-              <button className={styles.headerIconBtn} title="Video call" aria-label="Video call">
-                <UilVideo size="17" />
-              </button>
-              <button className={styles.headerIconBtn} title="More options" aria-label="More">
-                <UilEllipsisV size="17" />
-              </button>
-            </div>
-          </div>
-
-          {/* ---- Product context banner ---- */}
-          <div className={styles.productBanner}>
-            <img src={active.productImage} alt={active.product} className={styles.productBannerImg} />
-            <div className={styles.productBannerInfo}>
-              <span className={styles.productBannerName}>{active.product}</span>
-              <span className={styles.productBannerPrice}>{active.productPrice}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexShrink: 0 }}>
-              <Link href={`/products/${active.productId}`} className="btn btn-ghost btn-xs">
-                View
-              </Link>
-              <Link href="/checkout" className="btn btn-primary btn-xs" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <UilBolt size="11" /> Buy Now
-              </Link>
-            </div>
-          </div>
-
-          {/* ---- Messages ---- */}
-          <div className={styles.messages}>
-            {/* Date divider */}
-            <div className={styles.dateDivider}><span>Today</span></div>
-
-            {messages.map((msg, idx) => {
-              const isMe = msg.from === user?.uid || msg.fromName === 'Me';
-              const prevMsg = messages[idx - 1];
-              const sameAuthor = prevMsg && prevMsg.from === msg.from;
-              return (
-                <div
-                  key={msg.id}
-                  className={`${styles.msgRow} ${isMe ? styles.msgRowMe : styles.msgRowThem}`}
-                  style={{ marginTop: sameAuthor ? 2 : 12 }}
-                >
-                  {/* Their avatar (only on first of a group) */}
-                  {!isMe && !sameAuthor && (
-                    <div className={styles.msgAvatar} style={{ background: active.sellerColor }}>
-                      {active.sellerInitial}
+              {/* ---- Product context banner ---- */}
+              {active.product && (
+                <div className={styles.productBanner}>
+                  <div className={styles.productBannerInfo}>
+                    <span className={styles.productBannerName}>{active.product}</span>
+                    <span className={styles.productBannerPrice}>Direct Inquiry</span>
+                  </div>
+                  {active.productId && (
+                    <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexShrink: 0 }}>
+                      <Link href={`/products/${active.productId}`} className="btn btn-ghost btn-xs">
+                        View Product
+                      </Link>
                     </div>
                   )}
-                  {!isMe && sameAuthor && <div className={styles.msgAvatarSpacer} />}
+                </div>
+              )}
 
-                  <div className={styles.msgContent}>
-                    {/* Sender name (first in group only) */}
-                    {!isMe && !sameAuthor && (
-                      <span className={styles.msgSenderName}>{active.sellerName}</span>
-                    )}
-                    <div className={`${styles.bubble} ${isMe ? styles.bubbleMe : styles.bubbleThem}`}>
-                      <p className={styles.bubbleText}>{msg.text}</p>
-                      <div className={styles.bubbleMeta}>
-                        <span className={styles.bubbleTime}>{fmtTime(msg.timestamp)}</span>
-                        {isMe && (
-                          <span className={styles.statusTick}>
-                            <StatusTick status={msg.status} />
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              {/* ---- Messages ---- */}
+              <div className={styles.messages}>
+                <div className={styles.dateDivider}><span>Conversation History</span></div>
+
+                {messages.length === 0 ? (
+                  <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    <p>No messages yet. Send a message or select a quick reply below!</p>
                   </div>
-                </div>
-              );
-            })}
+                ) : (
+                  messages.map((msg, idx) => {
+                    const isMe = msg.from === user?.uid || msg.fromName === 'Me';
+                    const prevMsg = messages[idx - 1];
+                    const sameAuthor = prevMsg && prevMsg.from === msg.from;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`${styles.msgRow} ${isMe ? styles.msgRowMe : styles.msgRowThem}`}
+                        style={{ marginTop: sameAuthor ? 2 : 12 }}
+                      >
+                        {/* Avatar */}
+                        {!isMe && !sameAuthor && (
+                          <div className={styles.msgAvatar} style={{ background: active.sellerColor }}>
+                            {active.sellerInitial}
+                          </div>
+                        )}
+                        {!isMe && sameAuthor && <div className={styles.msgAvatarSpacer} />}
 
-            {/* Typing indicator */}
-            {convs.find(c => c.id === activeId)?.typing && (
-              <div className={`${styles.msgRow} ${styles.msgRowThem}`} style={{ marginTop: 12 }}>
-                <div className={styles.msgAvatar} style={{ background: active.sellerColor }}>
-                  {active.sellerInitial}
-                </div>
-                <div className={`${styles.bubble} ${styles.bubbleThem} ${styles.typingBubble}`}>
-                  <span className={styles.typingDot} />
-                  <span className={styles.typingDot} />
-                  <span className={styles.typingDot} />
-                </div>
+                        <div className={styles.msgContent}>
+                          {!isMe && !sameAuthor && (
+                            <span className={styles.msgSenderName}>{active.sellerName}</span>
+                          )}
+                          <div className={`${styles.bubble} ${isMe ? styles.bubbleMe : styles.bubbleThem}`}>
+                            {msg.image && (
+                              <img
+                                src={msg.image}
+                                alt="Attachment"
+                                style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 8, marginBottom: 4 }}
+                              />
+                            )}
+                            {msg.text && <p className={styles.bubbleText}>{msg.text}</p>}
+                            <div className={styles.bubbleMeta}>
+                              <span className={styles.bubbleTime}>{fmtTime(msg.timestamp)}</span>
+                              {isMe && (
+                                <span className={styles.statusTick}>
+                                  <StatusTick status={msg.status} />
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
 
-          {/* ---- Quick replies ---- */}
-          {showQuick && (
-            <div className={styles.quickReplies} onClick={e => e.stopPropagation()}>
-              {QUICK_REPLIES.map(q => (
-                <button key={q} className={styles.quickChip} onClick={() => { setInput(q); setShowQuick(false); inputRef.current?.focus(); }}>
-                  {q}
+              {/* ---- Quick replies ---- */}
+              {showQuick && (
+                <div className={styles.quickReplies} onClick={e => e.stopPropagation()}>
+                  {QUICK_REPLIES.map(q => (
+                    <button key={q} className={styles.quickChip} onClick={() => { setInput(q); setShowQuick(false); inputRef.current?.focus(); }}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ---- Emoji picker ---- */}
+              {showEmoji && (
+                <div className={styles.emojiPicker} onClick={e => e.stopPropagation()}>
+                  {EMOJIS.map(e => (
+                    <button key={e} className={styles.emojiBtn} onClick={() => appendEmoji(e)}>{e}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* ---- Input bar ---- */}
+              <div className={styles.inputBar}>
+                <div className={styles.inputActions}>
+                  <button
+                    className={styles.inputIconBtn}
+                    title="Quick replies"
+                    onClick={e => { e.stopPropagation(); setShowQuick(p => !p); setShowEmoji(false); }}
+                    aria-label="Quick replies"
+                  >
+                    <UilBolt size="18" />
+                  </button>
+                  <button
+                    className={styles.inputIconBtn}
+                    title="Emoji"
+                    onClick={e => { e.stopPropagation(); setShowEmoji(p => !p); setShowQuick(false); }}
+                    aria-label="Emoji"
+                  >
+                    <UilSmile size="18" />
+                  </button>
+                  <button
+                    className={styles.inputIconBtn}
+                    title="Attach image"
+                    aria-label="Attach image"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    <UilImage size="18" />
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImagePick}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+                </div>
+
+                <div className={styles.inputWrap}>
+                  <input
+                    ref={inputRef}
+                    className={styles.messageInput}
+                    placeholder={uploadingImage ? 'Uploading image...' : 'Type a message...'}
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={uploadingImage}
+                    id="chat-message-input"
+                  />
+                </div>
+
+                <button
+                  className={`${styles.sendBtn} ${input.trim() || uploadingImage ? styles.sendBtnActive : ''}`}
+                  onClick={handleSend}
+                  id="chat-send-btn"
+                  aria-label="Send message"
+                  disabled={!input.trim() && !uploadingImage}
+                >
+                  <UilMessage size="18" />
                 </button>
-              ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 48, color: 'var(--text-muted)', textAlign: 'center' }}>
+              <UilMessage size="48" style={{ opacity: 0.3, marginBottom: 16 }} />
+              <h2 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: 8 }}>Select a Conversation</h2>
+              <p style={{ maxWidth: 360, margin: '0 0 20px', fontSize: '0.88rem' }}>
+                Chat directly with sellers about electronics, pricing, warranties, and delivery across Rwanda.
+              </p>
+              <Link href="/products" className="btn btn-primary btn-sm">
+                <UilShoppingCart size="15" /> Browse Products
+              </Link>
             </div>
           )}
-
-          {/* ---- Emoji picker ---- */}
-          {showEmoji && (
-            <div className={styles.emojiPicker} onClick={e => e.stopPropagation()}>
-              {EMOJIS.map(e => (
-                <button key={e} className={styles.emojiBtn} onClick={() => appendEmoji(e)}>{e}</button>
-              ))}
-            </div>
-          )}
-
-          {/* ---- Input bar ---- */}
-          <div className={styles.inputBar}>
-            <div className={styles.inputActions}>
-              <button
-                className={styles.inputIconBtn}
-                title="Quick replies"
-                onClick={e => { e.stopPropagation(); setShowQuick(p => !p); setShowEmoji(false); }}
-                aria-label="Quick replies"
-              >
-                <UilBolt size="18" />
-              </button>
-              <button
-                className={styles.inputIconBtn}
-                title="Emoji"
-                onClick={e => { e.stopPropagation(); setShowEmoji(p => !p); setShowQuick(false); }}
-                aria-label="Emoji"
-              >
-                <UilSmile size="18" />
-              </button>
-              <button className={styles.inputIconBtn} title="Attach image" aria-label="Attach image">
-                <UilImage size="18" />
-              </button>
-            </div>
-
-            <div className={styles.inputWrap}>
-              <input
-                ref={inputRef}
-                className={styles.messageInput}
-                placeholder="Type a message..."
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                id="chat-message-input"
-              />
-            </div>
-
-            <button
-              className={`${styles.sendBtn} ${input.trim() ? styles.sendBtnActive : ''}`}
-              onClick={handleSend}
-              id="chat-send-btn"
-              aria-label="Send message"
-              disabled={!input.trim()}
-            >
-              <UilMessage size="18" />
-            </button>
-          </div>
         </div>
       </div>
-
-      {/* Mobile FAB to open sidebar */}
-      <button
-        className={styles.mobileSidebarFab}
-        onClick={() => setMobileSide(true)}
-        style={{ display: mobileSide ? 'none' : undefined }}
-        aria-label="Open conversations"
-      >
-        <UilMessage size="20" />
-        {totalUnread > 0 && <span className={styles.fabBadge}>{totalUnread}</span>}
-      </button>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: 64, textAlign: 'center', color: 'var(--text-muted)' }}>
+          Loading chat...
+        </div>
+      }
+    >
+      <ChatContent />
+    </Suspense>
   );
 }
