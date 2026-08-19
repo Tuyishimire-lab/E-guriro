@@ -1,16 +1,43 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
-import { MOCK_PRODUCTS } from '@/lib/constants';
-import { UilHeart, UilShoppingCart, UilTrashAlt } from '@/components/Icons';
+import type { Product } from '@/lib/types';
+import { UilHeart, UilShoppingCart, UilTrashAlt, UilRefresh } from '@/components/Icons';
 
 export default function WishlistPage() {
-  const { items, toggle, clear } = useWishlist();
+  const { items, clear } = useWishlist();
   const { addToCart } = useCart();
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const wishlisted = MOCK_PRODUCTS.filter(p => items.includes(p.id));
+  useEffect(() => {
+    async function loadProducts() {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/products?limit=100');
+        if (res.ok) setAllProducts(await res.json());
+      } catch (e) {
+        console.error('Failed to load wishlist products', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
+
+  const wishlisted = allProducts.filter(p => items.includes(p.id));
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 600, margin: '80px auto', padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>
+        <UilRefresh size="36" className="spin-icon" style={{ marginBottom: 16, opacity: 0.7 }} />
+        <p>Loading your saved wishlist items...</p>
+      </div>
+    );
+  }
 
   if (wishlisted.length === 0) {
     return (

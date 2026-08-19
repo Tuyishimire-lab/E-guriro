@@ -1,10 +1,11 @@
 'use client';
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
-import { MOCK_PRODUCTS, PRODUCT_CATEGORIES, formatRWF } from '@/lib/constants';
-import { UilSearch, UilFilter, UilTimes, UilSlidersV } from '@/components/Icons';
+import { PRODUCT_CATEGORIES, formatRWF } from '@/lib/constants';
+import type { Product } from '@/lib/types';
+import { UilSearch, UilFilter, UilTimes, UilSlidersV, UilRefresh } from '@/components/Icons';
 import styles from './page.module.css';
 
 const BRANDS = ['Samsung', 'Apple', 'Tecno', 'Infinix', 'Xiaomi', 'HP', 'Lenovo', 'Sony'];
@@ -20,6 +21,8 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const initialQ = searchParams.get('q') || '';
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState(initialQ);
   const [inputVal, setInputVal] = useState(initialQ);
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
@@ -30,21 +33,39 @@ function SearchContent() {
   const [sort, setSort] = useState('relevance');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  useEffect(() => {
+    async function loadProducts() {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/products?limit=100');
+        if (res.ok) {
+          const data = await res.json();
+          setProducts(data);
+        }
+      } catch (e) {
+        console.error('Failed to load products for search', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
+
   const toggleCat = (c: string) => setSelectedCats(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c]);
   const toggleBrand = (b: string) => setSelectedBrands(p => p.includes(b) ? p.filter(x => x !== b) : [...p, b]);
   const clearFilters = () => { setSelectedCats([]); setSelectedBrands([]); setMinPrice(''); setMaxPrice(''); setMinRating(0); };
 
   const results = useMemo(() => {
-    let list = MOCK_PRODUCTS.filter(p => {
+    let list = products.filter(p => {
       if (!query) return true;
       const q = query.toLowerCase();
       return p.title.toLowerCase().includes(q) ||
         p.category?.toLowerCase().includes(q) ||
-        p.seller?.toLowerCase().includes(q) ||
-        (p as any).brand?.toLowerCase().includes(q);
+        (p.seller || '').toLowerCase().includes(q) ||
+        (p.brand || '').toLowerCase().includes(q);
     });
     if (selectedCats.length) list = list.filter(p => selectedCats.includes(p.category || ''));
-    if (selectedBrands.length) list = list.filter(p => selectedBrands.some(b => p.title.includes(b)));
+    if (selectedBrands.length) list = list.filter(p => selectedBrands.some(b => (p.brand || '').toLowerCase() === b.toLowerCase() || p.title.toLowerCase().includes(b.toLowerCase())));
     if (minPrice) list = list.filter(p => p.price >= Number(minPrice));
     if (maxPrice) list = list.filter(p => p.price <= Number(maxPrice));
     if (minRating) list = list.filter(p => p.rating >= minRating);
@@ -54,7 +75,7 @@ function SearchContent() {
       case 'rating': list = [...list].sort((a, b) => b.rating - a.rating); break;
     }
     return list;
-  }, [query, selectedCats, selectedBrands, minPrice, maxPrice, minRating, sort]);
+  }, [products, query, selectedCats, selectedBrands, minPrice, maxPrice, minRating, sort]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

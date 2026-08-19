@@ -1,14 +1,15 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
-import { MOCK_PRODUCTS, formatRWF } from '@/lib/constants';
+import { formatRWF } from '@/lib/constants';
+import type { Product } from '@/lib/types';
 import { useCart } from '@/context/CartContext';
 import {
   UilShoppingCart, UilBolt, UilShieldCheck, UilTruck, UilCornerUpLeft,
   UilPhone, UilStar, UilCheckCircle, UilHeart, UilShare,
-  UilStore, UilMapMarker, UilClock, UilAngleRight,
+  UilStore, UilMapMarker, UilClock, UilAngleRight, UilRefresh,
 } from '@/components/Icons';
 import styles from './page.module.css';
 
@@ -38,7 +39,7 @@ function StarRating({ rating, size = 16, interactive = false, onRate }: {
   );
 }
 
-const MOCK_REVIEWS = [
+const INITIAL_REVIEWS = [
   { id: 1, user: 'Amina U.',     avatar: 'A', rating: 5, comment: 'Excellent product! Delivered quickly to Kicukiro. Battery life is amazing and the screen is brilliant.', date: 'Aug 10, 2026', verified: true,  helpful: 12 },
   { id: 2, user: 'Jean Paul K.', avatar: 'J', rating: 4, comment: 'Good quality, great packaging and the seller was very responsive. Camera quality exceeded my expectations.', date: 'Aug 5, 2026',  verified: true,  helpful: 8  },
   { id: 3, user: 'Marie C.',     avatar: 'M', rating: 5, comment: 'I love it! Will definitely buy again from this seller. Came with all accessories and original box.',           date: 'Jul 28, 2026', verified: false, helpful: 4  },
@@ -52,9 +53,11 @@ type Tab = typeof TABS[number];
 export default function ProductDetailPage() {
   const { id } = useParams();
   const { addToCart } = useCart();
-  const product = MOCK_PRODUCTS.find(p => p.id === id) || MOCK_PRODUCTS[0];
-  const related  = MOCK_PRODUCTS.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
 
+  const [product,      setProduct]      = useState<Product | null>(null);
+  const [related,      setRelated]      = useState<Product[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [reviews,      setReviews]      = useState(INITIAL_REVIEWS);
   const [qty,          setQty]         = useState(1);
   const [activeImage,  setActiveImage]  = useState(0);
   const [activeTab,    setActiveTab]    = useState<Tab>('Overview');
@@ -65,12 +68,65 @@ export default function ProductDetailPage() {
   const [reviewText,   setReviewText]   = useState('');
   const [notification, setNotif]        = useState('');
 
+  useEffect(() => {
+    async function loadProduct() {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/products/${id}`);
+        if (res.ok) {
+          const data: Product = await res.json();
+          setProduct(data);
+
+          // Fetch related in same category
+          if (data.category) {
+            const relRes = await fetch(`/api/products?category=${data.category}&limit=5`);
+            if (relRes.ok) {
+              const relData: Product[] = await relRes.json();
+              setRelated(relData.filter(p => p.id !== data.id).slice(0, 4));
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch product', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProduct();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div className="container" style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-secondary)' }}>
+          <UilRefresh size="36" className="spin-icon" style={{ marginBottom: 16, opacity: 0.7 }} />
+          <p style={{ fontSize: '1.1rem' }}>Loading product details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className={styles.page}>
+        <div className="container" style={{ textAlign: 'center', padding: '100px 0' }}>
+          <h2 style={{ fontSize: '1.8rem', marginBottom: 12 }}>Product Not Found</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>The device or electronic item you requested does not exist or has been removed.</p>
+          <Link href="/products" className="btn btn-primary">Browse All Products</Link>
+        </div>
+      </div>
+    );
+  }
+
   const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : 0;
   const specs  = product.specs ?? {};
   const stock  = product.stock ?? 99;
-  const images = [product.image, product.image, product.image, product.image];
+  const images = (product.images && product.images.length > 0)
+    ? product.images
+    : [product.image, product.image, product.image, product.image].filter(Boolean);
 
   const handleAddToCart = () => {
     for (let i = 0; i < qty; i++) {
@@ -327,7 +383,7 @@ export default function ProductDetailPage() {
               <div className={styles.sellerInfo}>
                 <p className={styles.sellerName}>{product.seller}</p>
                 <p className={styles.sellerSub}>
-                  <UilMapMarker size={11} /> {product.district}
+                  <UilMapMarker size={11} /> {(product as any).district || 'Kigali, Rwanda'}
                   &nbsp;|&nbsp;
                   <UilCheckCircle size={11} style={{ color: 'var(--brand-green)' }} /> Verified Seller
                 </p>
@@ -507,7 +563,7 @@ export default function ProductDetailPage() {
               </div>
 
               <div className={styles.reviewsList}>
-                {MOCK_REVIEWS.map(r => (
+                {reviews.map(r => (
                   <div key={r.id} className={styles.reviewCard}>
                     <div className={styles.reviewHead}>
                       <div className={styles.reviewAvatar}>{r.avatar}</div>
@@ -547,7 +603,28 @@ export default function ProductDetailPage() {
                     onChange={e => setReviewText(e.target.value)}
                     id="review-textarea"
                   />
-                  <button className="btn btn-primary btn-sm" id="submit-review-btn">Submit Review</button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    id="submit-review-btn"
+                    onClick={() => {
+                      if (!reviewText.trim() || myRating === 0) return;
+                      const newR = {
+                        id: Date.now(),
+                        user: 'You',
+                        avatar: 'Y',
+                        rating: myRating,
+                        comment: reviewText.trim(),
+                        date: 'Just now',
+                        verified: true,
+                        helpful: 0,
+                      };
+                      setReviews(prev => [newR, ...prev]);
+                      setReviewText('');
+                      setMyRating(0);
+                    }}
+                  >
+                    Submit Review
+                  </button>
                 </div>
               </div>
             </div>
@@ -591,7 +668,7 @@ export default function ProductDetailPage() {
               </Link>
             </div>
             <div className="products-grid">
-              {related.map(p => <ProductCard key={p.id} {...p} />)}
+              {related.map(p => <ProductCard key={p.id} {...p} reviews={p.reviews ?? 0} />)}
             </div>
           </div>
         </div>

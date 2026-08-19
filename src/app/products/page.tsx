@@ -1,8 +1,9 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
-import { MOCK_PRODUCTS, PRODUCT_CATEGORIES, FEATURED_BRANDS, formatRWF } from '@/lib/constants';
+import { PRODUCT_CATEGORIES, FEATURED_BRANDS, formatRWF } from '@/lib/constants';
+import type { Product } from '@/lib/types';
 import {
   UilFilter, UilSlidersV, UilSearch, UilGrid, UilListUl,
   UilRefresh, UilMobileAndroid, UilTablet, UilLaptop, UilTvRetro,
@@ -40,6 +41,8 @@ export default function ProductsPage() {
   const initialCategory = searchParams.get('category') || 'all';
   const initialBrand    = searchParams.get('brand') || 'all';
 
+  const [products,  setProducts]  = useState<Product[]>([]);
+  const [loading,   setLoading]   = useState(true);
   const [category,  setCategory]  = useState(initialCategory);
   const [brand,     setBrand]     = useState(initialBrand);
   const [condition, setCondition] = useState<'all' | 'new' | 'refurbished'>('all');
@@ -55,6 +58,24 @@ export default function ProductsPage() {
     return window.innerWidth > 900;
   });
 
+  useEffect(() => {
+    async function fetchProducts() {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/products?limit=100');
+        if (res.ok) {
+          const data = await res.json();
+          setProducts(data);
+        }
+      } catch (e) {
+        console.error('Failed to fetch products', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
+
   const clearAll = () => {
     setCategory('all'); setBrand('all'); setCondition('all');
     setSearch('');      setPriceMin(''); setPriceMax('');
@@ -67,13 +88,13 @@ export default function ProductsPage() {
   ].filter(Boolean).length;
 
   const filtered = useMemo(() => {
-    let result = [...MOCK_PRODUCTS];
+    let result = [...products];
     if (category !== 'all') result = result.filter(p => p.category === category);
     if (brand !== 'all')    result = result.filter(p => (p.brand || '').toLowerCase() === brand);
     if (condition !== 'all') result = result.filter(p => (p.condition || 'new') === condition);
     if (search)   result = result.filter(p =>
       p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.seller.toLowerCase().includes(search.toLowerCase())
+      (p.seller || '').toLowerCase().includes(search.toLowerCase())
     );
     if (priceMin) result = result.filter(p => p.price >= Number(priceMin));
     if (priceMax) result = result.filter(p => p.price <= Number(priceMax));
@@ -86,7 +107,7 @@ export default function ProductsPage() {
       case 'newest':     return result.reverse();
       default:           return result;
     }
-  }, [category, brand, condition, search, sortBy, priceMin, priceMax, minRating]);
+  }, [products, category, brand, condition, search, sortBy, priceMin, priceMax, minRating]);
 
   const currentCategoryLabel = category === 'all'
     ? 'All Electronics'
@@ -186,11 +207,11 @@ export default function ProductsPage() {
                     <UilGrid size="16" style={{ color: '#aaa' }} />
                   </span>
                   All Products
-                  <span className={styles.catCount}>{MOCK_PRODUCTS.length}</span>
+                  <span className={styles.catCount}>{products.length}</span>
                 </button>
                 {PRODUCT_CATEGORIES.map(cat => {
                   const IconComp = CAT_ICON_MAP[cat.id];
-                  const count = MOCK_PRODUCTS.filter(p => p.category === cat.id).length;
+                  const count = products.filter(p => p.category === cat.id).length;
                   return (
                     <button
                       key={cat.id}
@@ -374,7 +395,12 @@ export default function ProductsPage() {
             </div>
 
             {/* Results */}
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-secondary)' }}>
+                <UilRefresh size="32" className="spin-icon" style={{ marginBottom: 12, opacity: 0.7 }} />
+                <p>Loading devices & electronics...</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className={styles.empty}>
                 <div className={styles.emptyIconWrap}>
                   <UilSearch size="40" style={{ color: 'var(--text-muted)' }} />
@@ -388,7 +414,7 @@ export default function ProductsPage() {
               </div>
             ) : (
               <div className={viewMode === 'grid' ? 'products-grid' : styles.listView}>
-                {filtered.map(p => <ProductCard key={p.id} {...p} />)}
+                {filtered.map(p => <ProductCard key={p.id} {...p} reviews={p.reviews ?? 0} />)}
               </div>
             )}
           </div>

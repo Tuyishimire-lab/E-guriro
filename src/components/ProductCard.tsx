@@ -15,7 +15,7 @@ interface ProductCardProps {
   originalPrice?: number;
   image: string;
   rating: number;
-  reviews: number;
+  reviews?: number;
   seller: string;
   badge?: string;
   category?: string;
@@ -58,7 +58,7 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function ProductCard({
-  id, title, price, originalPrice, image, rating, reviews, seller, badge,
+  id, title, price, originalPrice, image, rating, reviews = 0, seller, badge,
   stock = 99, sellerId = '', condition, warranty, specs, brand,
 }: ProductCardProps) {
   const { addToCart } = useCart();

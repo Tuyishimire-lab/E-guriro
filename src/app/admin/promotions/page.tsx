@@ -1,6 +1,7 @@
-﻿'use client';
-import { useState } from 'react';
-import { formatRWF, MOCK_PRODUCTS } from '@/lib/constants';
+'use client';
+import { useState, useEffect } from 'react';
+import { formatRWF } from '@/lib/constants';
+import type { Product } from '@/lib/types';
 import { UilFire, UilTag, UilBell, UilPlus, UilTrashAlt, UilCheck, UilTimes, UilEdit } from '@/components/Icons';
 import styles from '../layout.module.css';
 
@@ -26,11 +27,24 @@ const INITIAL_BANNERS: Banner[] = [
 
 export default function AdminPromotions() {
   const [tab, setTab] = useState<Tab>('flash');
+  const [products, setProducts] = useState<Product[]>([]);
   const [flashSales, setFlashSales] = useState<FlashSale[]>(INITIAL_FLASH);
   const [codes, setCodes] = useState<DiscountCode[]>(INITIAL_CODES);
   const [banners, setBanners] = useState<Banner[]>(INITIAL_BANNERS);
   const [toast, setToast] = useState('');
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/products?limit=100');
+        if (res.ok) setProducts(await res.json());
+      } catch (e) {
+        console.error('Failed to load products for promo', e);
+      }
+    }
+    loadProducts();
+  }, []);
 
   // Flash sale form state
   const [fsName, setFsName] = useState('');
@@ -137,7 +151,7 @@ export default function AdminPromotions() {
               <div className={styles.formGroup} style={{ marginBottom: 16 }}>
                 <label className={styles.formLabel}>Include Products (select multiple)</label>
                 <select multiple className={styles.formSelect} style={{ height: 120 }} value={fsProducts} onChange={e => setFsProducts(Array.from(e.target.selectedOptions, o => o.value))}>
-                  {MOCK_PRODUCTS.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                  {products.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
               </div>
               <div className={styles.formActions}>

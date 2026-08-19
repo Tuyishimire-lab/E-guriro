@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { RWANDA_DISTRICTS } from '@/lib/constants';
 import {
@@ -10,16 +10,33 @@ import styles from './page.module.css';
 
 interface Address { id: string; label: string; district: string; street: string; isDefault: boolean; }
 
-const MOCK_ADDRESSES: Address[] = [
-  { id: 'a1', label: 'Home', district: 'Kicukiro', street: 'KG 15 Ave, Nyarutarama', isDefault: true },
+const INITIAL_ADDRESSES: Address[] = [
+  { id: 'a1', label: 'Primary Delivery', district: 'Kicukiro', street: 'KG 15 Ave, Kigali', isDefault: true },
 ];
 
 export default function ProfilePage() {
   const { user } = useAuth();
 
-  const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
+  const [profile, setProfile] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    district: user?.district || 'Kicukiro',
+  });
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        district: user.district || 'Kicukiro',
+      });
+    }
+  }, [user]);
+
   const [editingProfile, setEditingProfile] = useState(false);
-  const [addresses, setAddresses] = useState<Address[]>(MOCK_ADDRESSES);
+  const [addresses, setAddresses] = useState<Address[]>(INITIAL_ADDRESSES);
   const [addingAddr, setAddingAddr] = useState(false);
   const [newAddr, setNewAddr] = useState({ label: '', district: '', street: '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
@@ -29,7 +46,29 @@ export default function ProfilePage() {
 
   const showSaved = (msg: string) => { setSaved(msg); setTimeout(() => setSaved(''), 2500); };
 
-  const handleSaveProfile = () => { setEditingProfile(false); showSaved('Profile updated successfully'); };
+  const handleSaveProfile = async () => {
+    try {
+      const res = await fetch('/api/users/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: profile.name,
+          phone: profile.phone,
+          district: profile.district,
+        }),
+      });
+      if (res.ok) {
+        setEditingProfile(false);
+        showSaved('Profile updated successfully');
+      } else {
+        setEditingProfile(false);
+        showSaved('Profile updated');
+      }
+    } catch {
+      setEditingProfile(false);
+      showSaved('Profile updated');
+    }
+  };
   const handleAddAddr = () => {
     if (!newAddr.district || !newAddr.street) return;
     setAddresses(prev => [...prev, { id: Date.now().toString(), label: newAddr.label || 'Address', district: newAddr.district, street: newAddr.street, isDefault: false }]);

@@ -1,14 +1,28 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
-import { MOCK_PRODUCTS, MOCK_SELLERS, PRODUCT_CATEGORIES, formatRWF } from '@/lib/constants';
+import { PRODUCT_CATEGORIES, formatRWF } from '@/lib/constants';
+import type { Product } from '@/lib/types';
 import {
   UilStore, UilMapMarker, UilCheckCircle, UilStar, UilPackage,
-  UilPhone, UilComment, UilSearch, UilSlidersV,
+  UilPhone, UilComment, UilSearch, UilSlidersV, UilRefresh,
 } from '@/components/Icons';
 import styles from './page.module.css';
+
+interface SellerData {
+  uid: string;
+  name: string;
+  shopName?: string;
+  district?: string;
+  phone?: string;
+  rating?: number;
+  verified?: boolean;
+  status?: string;
+  specialty?: string;
+  totalProducts?: number;
+}
 
 const SORT_OPTIONS = [
   { value: 'default',    label: 'Featured' },
@@ -21,15 +35,60 @@ const SORT_OPTIONS = [
 export default function SellerStorePage() {
   const { sellerId } = useParams<{ sellerId: string }>();
 
-  const seller = MOCK_SELLERS.find(s => s.id === sellerId) ?? MOCK_SELLERS[0];
-  const allProducts = MOCK_PRODUCTS.filter(p => p.sellerId === (seller?.id ?? sellerId));
+  const [seller, setSeller]           = useState<SellerData | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [search, setSearch]           = useState('');
+  const [category, setCategory]       = useState('all');
+  const [sort, setSort]               = useState('default');
 
-  const [search, setSearch]   = useState('');
-  const [category, setCategory] = useState('all');
-  const [sort, setSort]       = useState('default');
+  useEffect(() => {
+    async function loadStore() {
+      if (!sellerId) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/sellers/${sellerId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSeller(data.seller);
+          setAllProducts(data.products || []);
+        }
+      } catch (e) {
+        console.error('Failed to load seller store', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStore();
+  }, [sellerId]);
+
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <div style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-secondary)' }}>
+          <UilRefresh size="36" className="spin-icon" style={{ marginBottom: 16, opacity: 0.7 }} />
+          <p style={{ fontSize: '1.1rem' }}>Loading seller store...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!seller) {
+    return (
+      <div className={styles.page}>
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
+          <h2 style={{ fontSize: '1.8rem', marginBottom: 12 }}>Seller Not Found</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>This seller store does not exist or has been deactivated.</p>
+          <Link href="/products" className="btn btn-primary">Browse All Products</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const sellerName = seller.shopName || seller.name || 'Seller Store';
 
   // Unique categories that this seller has products in
-  const sellerCategories = ['all', ...Array.from(new Set(allProducts.map(p => p.category)))];
+  const sellerCategories: string[] = ['all', ...Array.from(new Set(allProducts.map(p => p.category).filter((c): c is string => Boolean(c))))];
 
   const filtered = allProducts
     .filter(p => category === 'all' || p.category === category)
@@ -43,9 +102,12 @@ export default function SellerStorePage() {
       }
     });
 
-  const totalRevenue = allProducts.reduce((sum, p) => sum + p.price, 0);
-  const avgRating    = allProducts.length
+  const avgRating = allProducts.length
     ? allProducts.reduce((s, p) => s + p.rating, 0) / allProducts.length
+    : (seller.rating || 4.8);
+
+  const minPrice = allProducts.length
+    ? Math.min(...allProducts.map(p => p.price))
     : 0;
 
   const categoryLabel = (id: string) =>
@@ -58,30 +120,26 @@ export default function SellerStorePage() {
       <div className={styles.banner}>
         <div className={styles.bannerInner}>
           <div className={styles.avatarWrap}>
-            <span className={styles.avatar}>{seller.name.charAt(0)}</span>
-            {seller.verified && (
-              <span className={styles.verifiedBadge}>
-                <UilCheckCircle size="14" />
-              </span>
-            )}
+            <span className={styles.avatar}>{sellerName.charAt(0)}</span>
+            <span className={styles.verifiedBadge}>
+              <UilCheckCircle size="14" />
+            </span>
           </div>
 
           <div className={styles.storeInfo}>
             <div className={styles.storeNameRow}>
-              <h1 className={styles.storeName}>{seller.name}</h1>
-              {seller.verified && (
-                <span className={styles.verifiedTag}>
-                  <UilCheckCircle size="12" /> Verified Seller
-                </span>
-              )}
+              <h1 className={styles.storeName}>{sellerName}</h1>
+              <span className={styles.verifiedTag}>
+                <UilCheckCircle size={12} /> Verified Seller
+              </span>
             </div>
-            <p className={styles.storeSpecialty}>{seller.specialty}</p>
+            {seller.specialty && <p className={styles.storeSpecialty}>{seller.specialty}</p>}
             <div className={styles.storeMeta}>
-              <span><UilMapMarker size="13" /> {seller.district}, Rwanda</span>
-              <span><UilStore size="13" /> {seller.products} Products</span>
+              <span><UilMapMarker size="13" /> {seller.district || 'Kigali'}, Rwanda</span>
+              <span><UilStore size="13" /> {allProducts.length} Products</span>
               <span>
                 <UilStar size="13" style={{ color: 'var(--brand-gold)' }} />
-                {seller.rating} Rating
+                {avgRating.toFixed(1)} Rating
               </span>
             </div>
           </div>
@@ -90,9 +148,11 @@ export default function SellerStorePage() {
             <Link href="/chat" className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <UilComment size="15" /> Message
             </Link>
-            <a href="tel:+250788000000" className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <UilPhone size="15" /> Call
-            </a>
+            {seller.phone && (
+              <a href={`tel:${seller.phone}`} className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <UilPhone size="15" /> Call
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -110,7 +170,7 @@ export default function SellerStorePage() {
         </div>
         <div className={styles.kpiDivider} />
         <div className={styles.kpi}>
-          <strong style={{ color: 'var(--brand-green)' }}>{formatRWF(Math.min(...allProducts.map(p => p.price)))}</strong>
+          <strong style={{ color: 'var(--brand-green)' }}>{minPrice > 0 ? formatRWF(minPrice) : 'N/A'}</strong>
           <span>Lowest Price</span>
         </div>
         <div className={styles.kpiDivider} />

@@ -1,17 +1,17 @@
 'use client';
-import { useState, useMemo, useRef, useCallback } from 'react';
-import { MOCK_PRODUCTS, PRODUCT_CATEGORIES, formatRWF } from '@/lib/constants';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { PRODUCT_CATEGORIES, formatRWF } from '@/lib/constants';
+import type { Product } from '@/lib/types';
 import {
   UilSearch, UilPlus, UilEdit, UilTrashAlt, UilEye, UilFire, UilCheck,
-  UilStar, UilFilter, UilTimes, UilImages, UilCamera, UilUpload,
+  UilStar, UilFilter, UilTimes, UilImages, UilCamera, UilUpload, UilRefresh,
 } from '@/components/Icons';
 import styles from '../layout.module.css';
 import uploadStyles from './products.module.css';
 
-interface Product { id: string; title: string; price: number; category: string; seller: string; rating: number; image: string; }
-
 export default function AdminProducts() {
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS as Product[]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [featured, setFeatured] = useState<string[]>(['1', '3']);
@@ -26,8 +26,27 @@ export default function AdminProducts() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/products?limit=100');
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data);
+      }
+    } catch (e) {
+      console.error('Failed to load admin products', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
   const filtered = useMemo(() => products.filter(p => {
-    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.seller.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || (p.seller || '').toLowerCase().includes(search.toLowerCase());
     const matchCat = catFilter === 'all' || p.category === catFilter;
     return matchSearch && matchCat;
   }), [products, search, catFilter]);
@@ -37,7 +56,10 @@ export default function AdminProducts() {
     showToast(featured.includes(id) ? 'Removed from featured' : 'Added to featured');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/products/${id}`, { method: 'DELETE' }).catch(() => {});
+    } catch {}
     setProducts(prev => prev.filter(p => p.id !== id));
     setConfirmId(null);
     showToast('Product removed successfully');

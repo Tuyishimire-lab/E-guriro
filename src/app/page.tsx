@@ -1,9 +1,10 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import BrandIcon from '@/components/BrandIcon';
-import { MOCK_PRODUCTS, PRODUCT_CATEGORIES, MOCK_SELLERS, FEATURED_BRANDS, formatRWF } from '@/lib/constants';
+import { PRODUCT_CATEGORIES, FEATURED_BRANDS, formatRWF } from '@/lib/constants';
+import type { Product } from '@/lib/types';
 import {
   UilShoppingCart, UilStore, UilTruck, UilShieldCheck, UilArrowRight,
   UilStar, UilMobileAndroid, UilCreditCard, UilMoneyBill,
@@ -13,6 +14,18 @@ import {
   UilBolt, UilWatch, UilHistory, UilTvRetro, UilBatteryBolt,
 } from '@/components/Icons';
 import styles from './page.module.css';
+
+interface SellerItem {
+  id?: string;
+  uid?: string;
+  name: string;
+  shopName?: string;
+  district?: string;
+  rating?: number;
+  totalProducts?: number;
+  products?: number;
+  verified?: boolean;
+}
 
 // Category ID -> Unicon component map
 const CATEGORY_ICON_MAP: Record<string, React.ComponentType<{ size?: string | number; style?: React.CSSProperties }>> = {
@@ -75,18 +88,40 @@ const PAYMENT_METHODS = [
   { icon: UilMoneyBill, name: 'Bank Transfer', desc: 'All Rwandan banks' },
 ];
 
-// Phone comparison teaser data
-const COMPARE_PHONES = [
-  { id: '1', name: 'Samsung Galaxy S24', price: 850000, ram: '8GB', storage: '256GB', camera: '50MP', battery: '4000mAh', brand: 'Samsung' },
-  { id: '3', name: 'iPhone 15 Pro', price: 1450000, ram: '8GB', storage: '256GB', camera: '48MP', battery: '3274mAh', brand: 'Apple' },
-  { id: '4', name: 'Tecno Spark 20 Pro+', price: 155000, ram: '8GB', storage: '256GB', camera: '108MP', battery: '5000mAh', brand: 'Tecno' },
-];
-
 export default function HomePage() {
   const flashSaleEnd = new Date(Date.now() + 5 * 3600000);
-  const flashSaleProducts = MOCK_PRODUCTS.filter(p => ['1', '2', '7', '9'].includes(p.id));
-  const trendingProducts = MOCK_PRODUCTS.filter(p => ['3', '4', '5', '10', '11', '12'].includes(p.id));
-  const smartphones = MOCK_PRODUCTS.filter(p => p.category === 'smartphones').slice(0, 4);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sellers, setSellers] = useState<SellerItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [prodRes, sellRes] = await Promise.all([
+          fetch('/api/products?limit=50'),
+          fetch('/api/sellers'),
+        ]);
+        if (prodRes.ok) {
+          const pData = await prodRes.json();
+          setProducts(pData);
+        }
+        if (sellRes.ok) {
+          const sData = await sellRes.json();
+          setSellers(sData);
+        }
+      } catch (e) {
+        console.error('Failed to load homepage data', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const flashSaleProducts = products.filter(p => p.badge?.toLowerCase().includes('flash') || p.originalPrice).slice(0, 4);
+  const displayFlashSales = flashSaleProducts.length > 0 ? flashSaleProducts : products.slice(0, 4);
+  const trendingProducts = products.slice(0, 8);
+  const smartphones = products.filter(p => p.category === 'smartphones').slice(0, 4);
 
   // Category dropdown state
   const [catOpen, setCatOpen] = useState(false);
@@ -287,7 +322,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="products-grid">
-            {flashSaleProducts.map(p => (
+            {displayFlashSales.map(p => (
               <ProductCard key={p.id} {...p} badge="Flash Sale" />
             ))}
           </div>
@@ -304,39 +339,42 @@ export default function HomePage() {
             </Link>
           </div>
           <div className={styles.compareGrid}>
-            {COMPARE_PHONES.map((phone, i) => (
-              <div key={phone.id} className={`${styles.compareCard} ${i === 1 ? styles.compareCardFeatured : ''}`}>
-                {i === 1 && <div className={styles.compareFeaturedBadge}>Most Popular</div>}
-                <div className={styles.compareBrandRow}>
-                  <span className={styles.compareBrand}>{phone.brand}</span>
+            {smartphones.slice(0, 3).map((phone, i) => {
+              const pSpecs = phone.specs || {};
+              return (
+                <div key={phone.id} className={`${styles.compareCard} ${i === 1 ? styles.compareCardFeatured : ''}`}>
+                  {i === 1 && <div className={styles.compareFeaturedBadge}>Most Popular</div>}
+                  <div className={styles.compareBrandRow}>
+                    <span className={styles.compareBrand}>{phone.brand || 'RwandaBuy'}</span>
+                  </div>
+                  <h3 className={styles.compareName}>{phone.title}</h3>
+                  <div className={styles.comparePrice}>{formatRWF(phone.price)}</div>
+                  <div className={styles.compareSpecs}>
+                    {[
+                      { label: 'RAM', value: pSpecs.ram || '8GB' },
+                      { label: 'Storage', value: pSpecs.storage || '128GB' },
+                      { label: 'Camera', value: pSpecs.camera || '50MP' },
+                      { label: 'Battery', value: pSpecs.battery || '5000mAh' },
+                    ].map(spec => (
+                      <div key={spec.label} className={styles.compareSpecRow}>
+                        <span className={styles.compareSpecLabel}>{spec.label}</span>
+                        <span className={styles.compareSpecValue}>
+                          <UilCheck size="12" style={{ color: 'var(--brand-green)' }} />
+                          {spec.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link
+                    href={`/products/${phone.id}`}
+                    className={`btn ${i === 1 ? 'btn-primary' : 'btn-secondary'} btn-sm btn-full`}
+                    id={`compare-buy-${phone.id}`}
+                  >
+                    View Details
+                  </Link>
                 </div>
-                <h3 className={styles.compareName}>{phone.name}</h3>
-                <div className={styles.comparePrice}>{formatRWF(phone.price)}</div>
-                <div className={styles.compareSpecs}>
-                  {[
-                    { label: 'RAM', value: phone.ram },
-                    { label: 'Storage', value: phone.storage },
-                    { label: 'Camera', value: phone.camera },
-                    { label: 'Battery', value: phone.battery },
-                  ].map(spec => (
-                    <div key={spec.label} className={styles.compareSpecRow}>
-                      <span className={styles.compareSpecLabel}>{spec.label}</span>
-                      <span className={styles.compareSpecValue}>
-                        <UilCheck size="12" style={{ color: 'var(--brand-green)' }} />
-                        {spec.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <Link
-                  href={`/products/${phone.id}`}
-                  className={`btn ${i === 1 ? 'btn-primary' : 'btn-secondary'} btn-sm btn-full`}
-                  id={`compare-buy-${phone.id}`}
-                >
-                  View Details
-                </Link>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -366,26 +404,29 @@ export default function HomePage() {
             </Link>
           </div>
           <div className={styles.sellersGrid}>
-            {MOCK_SELLERS.map(seller => (
-              <Link key={seller.id} href={`/seller/${seller.id}/store`} className={styles.sellerCard}>
-                <div className={styles.sellerAvatar}>{seller.name.charAt(0)}</div>
-                <div className={styles.sellerInfo}>
-                  <div className={styles.sellerTop}>
-                    <h3 className={styles.sellerName}>{seller.name}</h3>
-                    {seller.verified && <span className={styles.verifiedBadge}>Verified</span>}
+            {sellers.map(seller => {
+              const sId = seller.uid || seller.id || '';
+              const sName = seller.shopName || seller.name || 'Tech Seller';
+              return (
+                <Link key={sId} href={`/seller/${sId}/store`} className={styles.sellerCard}>
+                  <div className={styles.sellerAvatar}>{sName.charAt(0)}</div>
+                  <div className={styles.sellerInfo}>
+                    <div className={styles.sellerTop}>
+                      <h3 className={styles.sellerName}>{sName}</h3>
+                      <span className={styles.verifiedBadge}>Verified</span>
+                    </div>
+                    <p className={styles.sellerMeta}>
+                      {seller.totalProducts ?? seller.products ?? 0} Products &nbsp;|&nbsp; {seller.district || 'Kigali'}
+                    </p>
+                    <div className={styles.sellerRating}>
+                      <UilStar size="14" className={styles.starIcon} />
+                      <strong>{seller.rating && seller.rating > 0 ? seller.rating : '4.8'}</strong>
+                      <span className={styles.ratingLabel}>Rating</span>
+                    </div>
                   </div>
-                  <p className={styles.sellerMeta}>{seller.products} Products &nbsp;|&nbsp; {seller.district}</p>
-                  {'specialty' in seller && (
-                    <p className={styles.sellerSpecialty}>{(seller as any).specialty}</p>
-                  )}
-                  <div className={styles.sellerRating}>
-                    <UilStar size="14" className={styles.starIcon} />
-                    <strong>{seller.rating}</strong>
-                    <span className={styles.ratingLabel}>Rating</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
