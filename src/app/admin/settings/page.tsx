@@ -1,7 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { DELIVERY_FEES } from '@/lib/constants';
-import { UilStore, UilTruck, UilCreditCard, UilShield, UilMoneyBill, UilCheck, UilStar } from '@/components/Icons';
+import { DELIVERY_FEES, PICKUP_STATIONS, type PickupStation } from '@/lib/constants';
+import {
+  UilStore, UilTruck, UilCreditCard, UilShield, UilMoneyBill,
+  UilCheck, UilStar, UilMapMarker, UilPlus, UilTrashAlt,
+  UilClock, UilPhone,
+} from '@/components/Icons';
 import styles from '../layout.module.css';
 
 export default function AdminSettings() {
@@ -14,6 +18,21 @@ export default function AdminSettings() {
   });
   const [commission, setCommission] = useState(8);
   const [deliveryFees, setDeliveryFees] = useState<Record<string, number>>(DELIVERY_FEES);
+  const [pickupStations, setPickupStations] = useState<PickupStation[]>(PICKUP_STATIONS);
+  const [pickupFee, setPickupFee] = useState(1000);
+  const [freePickupThreshold, setFreePickupThreshold] = useState(50000);
+
+  const [newStation, setNewStation] = useState<Omit<PickupStation, 'id'>>({
+    name: '',
+    district: 'Nyarugenge',
+    landmark: '',
+    address: '',
+    hours: 'Mon – Sat: 8:00 AM – 8:00 PM',
+    phone: '+250 788 000 000',
+    popular: false,
+  });
+  const [showAddStation, setShowAddStation] = useState(false);
+
   const [payments, setPayments] = useState({
     mtnMomo: true,
     airtelMoney: true,
@@ -55,6 +74,11 @@ export default function AdminSettings() {
           }
           if (typeof data.commission === 'number') setCommission(data.commission);
           if (data.deliveryFees) setDeliveryFees(data.deliveryFees);
+          if (Array.isArray(data.pickupStations) && data.pickupStations.length > 0) {
+            setPickupStations(data.pickupStations);
+          }
+          if (typeof data.pickupFee === 'number') setPickupFee(data.pickupFee);
+          if (typeof data.freePickupThreshold === 'number') setFreePickupThreshold(data.freePickupThreshold);
           if (data.payments) setPayments(data.payments);
           if (data.features) setFeatures(data.features);
           if (typeof data.maintenance === 'boolean') setMaintenance(data.maintenance);
@@ -93,12 +117,49 @@ export default function AdminSettings() {
   const savePayments = () => saveSettingsToDb({ payments }, 'Payment method configuration saved to database');
   const saveFeatures = () => saveSettingsToDb({ features }, 'Platform feature toggles saved to database');
 
+  const handleAddStation = () => {
+    if (!newStation.name.trim() || !newStation.landmark.trim()) {
+      showToast('Please enter a station name and landmark description.');
+      return;
+    }
+    const created: PickupStation = {
+      id: `ps-${Date.now().toString(36)}`,
+      ...newStation,
+    };
+    const updated = [...pickupStations, created];
+    setPickupStations(updated);
+    setShowAddStation(false);
+    setNewStation({
+      name: '',
+      district: 'Nyarugenge',
+      landmark: '',
+      address: '',
+      hours: 'Mon – Sat: 8:00 AM – 8:00 PM',
+      phone: '+250 788 000 000',
+      popular: false,
+    });
+    saveSettingsToDb({ pickupStations: updated, pickupFee, freePickupThreshold }, `Station "${created.name}" added successfully`);
+  };
+
+  const handleDeleteStation = (id: string, name: string) => {
+    const updated = pickupStations.filter(s => s.id !== id);
+    setPickupStations(updated);
+    saveSettingsToDb({ pickupStations: updated, pickupFee, freePickupThreshold }, `Station "${name}" removed`);
+  };
+
+  const savePickupStationConfig = () => {
+    saveSettingsToDb(
+      { pickupStations, pickupFee, freePickupThreshold },
+      'Kigali Pickup Stations and pricing saved to database'
+    );
+  };
+
   return (
     <div>
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>Settings</h1>
-          <p className={styles.pageSub}>Global platform configuration & database controls</p>
+          <p className={styles.pageSub}>Global platform configuration, Pickup Stations & database controls</p>
         </div>
       </div>
 
@@ -129,6 +190,176 @@ export default function AdminSettings() {
           </div>
           <button className="btn btn-primary btn-sm" onClick={savePlatform} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Kigali Pickup Stations (Click & Collect) ─── */}
+      <div className={styles.settingSection}>
+        <div className={styles.settingSectionHeader} style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <UilMapMarker size="18" style={{ color: 'var(--brand-green)' }} />
+            <span className={styles.settingSectionTitle}>Kigali Pickup Stations (Click & Collect)</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-xs"
+            onClick={() => setShowAddStation(p => !p)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+          >
+            <UilPlus size="13" /> {showAddStation ? 'Close Form' : 'Add Pickup Station'}
+          </button>
+        </div>
+
+        <div className={styles.settingSectionBody}>
+          <div className={styles.formGrid} style={{ marginBottom: 16 }}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Standard Pickup Fee</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>RWF</span>
+                <input
+                  className={styles.formInput}
+                  type="number"
+                  value={pickupFee}
+                  onChange={e => setPickupFee(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Free Pickup Threshold</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>RWF</span>
+                <input
+                  className={styles.formInput}
+                  type="number"
+                  value={freePickupThreshold}
+                  onChange={e => setFreePickupThreshold(Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Add Station Form */}
+          {showAddStation && (
+            <div style={{ background: 'rgba(0,165,80,0.05)', border: '1px solid rgba(0,165,80,0.25)', borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 20 }}>
+              <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', fontWeight: 700, color: 'var(--brand-green)' }}>
+                📍 Add New Pickup Station
+              </h4>
+              <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Station Name</label>
+                  <input
+                    className={styles.formInput}
+                    placeholder="e.g. Nyabugogo Central Hub"
+                    value={newStation.name}
+                    onChange={e => setNewStation(p => ({ ...p, name: e.target.value }))}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>District</label>
+                  <select
+                    className={styles.formInput}
+                    value={newStation.district}
+                    onChange={e => setNewStation(p => ({ ...p, district: e.target.value }))}
+                  >
+                    <option value="Nyarugenge">Nyarugenge</option>
+                    <option value="Gasabo">Gasabo</option>
+                    <option value="Kicukiro">Kicukiro</option>
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Landmark Description</label>
+                  <input
+                    className={styles.formInput}
+                    placeholder="e.g. Ground Floor, Near Taxi Park Main Gate"
+                    value={newStation.landmark}
+                    onChange={e => setNewStation(p => ({ ...p, landmark: e.target.value }))}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Street Address</label>
+                  <input
+                    className={styles.formInput}
+                    placeholder="e.g. KN 1 Rd, Nyabugogo"
+                    value={newStation.address}
+                    onChange={e => setNewStation(p => ({ ...p, address: e.target.value }))}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Operating Hours</label>
+                  <input
+                    className={styles.formInput}
+                    placeholder="e.g. Mon – Sat: 8:00 AM – 8:00 PM"
+                    value={newStation.hours}
+                    onChange={e => setNewStation(p => ({ ...p, hours: e.target.value }))}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Hub Contact Phone</label>
+                  <input
+                    className={styles.formInput}
+                    placeholder="+250 788 XXX XXX"
+                    value={newStation.phone}
+                    onChange={e => setNewStation(p => ({ ...p, phone: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button type="button" className="btn btn-primary btn-sm" onClick={handleAddStation}>
+                  Save Station
+                </button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAddStation(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Existing Stations List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+            {pickupStations.map(st => (
+              <div
+                key={st.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <strong style={{ fontSize: '0.92rem' }}>{st.name}</strong>
+                    <span className="badge badge-blue" style={{ fontSize: '0.68rem' }}>{st.district}</span>
+                    {st.popular && <span className="badge badge-gold" style={{ fontSize: '0.65rem' }}>Popular</span>}
+                  </div>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    📍 {st.landmark} &nbsp;·&nbsp; 🕒 {st.hours} &nbsp;·&nbsp; 📞 {st.phone}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-danger btn-xs"
+                  onClick={() => handleDeleteStation(st.id, st.name)}
+                  title="Remove Station"
+                  style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <UilTrashAlt size="12" /> Remove
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button className="btn btn-primary btn-sm" onClick={savePickupStationConfig} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Pickup Station Settings'}
           </button>
         </div>
       </div>

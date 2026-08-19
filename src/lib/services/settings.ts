@@ -1,9 +1,9 @@
 /**
  * Platform Settings Service — Neon Postgres
- * Persists global marketplace settings (commission rate, delivery fees, payment toggles, contact info)
+ * Persists global marketplace settings (commission rate, delivery fees, payment toggles, pickup stations, contact info)
  */
 import { sql } from '@/lib/db';
-import { DELIVERY_FEES } from '@/lib/constants';
+import { DELIVERY_FEES, PICKUP_STATIONS, PICKUP_FEE, FREE_PICKUP_THRESHOLD, type PickupStation } from '@/lib/constants';
 
 export interface PlatformSettings {
   name: string;
@@ -13,6 +13,9 @@ export interface PlatformSettings {
   currency: string;
   commission: number;
   deliveryFees: Record<string, number>;
+  pickupStations: PickupStation[];
+  pickupFee: number;
+  freePickupThreshold: number;
   payments: {
     mtnMomo: boolean;
     airtelMoney: boolean;
@@ -39,6 +42,9 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   currency: 'RWF',
   commission: 8,
   deliveryFees: DELIVERY_FEES,
+  pickupStations: PICKUP_STATIONS,
+  pickupFee: PICKUP_FEE,
+  freePickupThreshold: FREE_PICKUP_THRESHOLD,
   payments: {
     mtnMomo: true,
     airtelMoney: true,
@@ -78,7 +84,13 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
         ON CONFLICT (id) DO NOTHING`;
       return DEFAULT_SETTINGS;
     }
-    return { ...DEFAULT_SETTINGS, ...rows[0].data };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...rows[0].data,
+      pickupStations: rows[0].data?.pickupStations || DEFAULT_SETTINGS.pickupStations,
+      pickupFee: typeof rows[0].data?.pickupFee === 'number' ? rows[0].data.pickupFee : DEFAULT_SETTINGS.pickupFee,
+      freePickupThreshold: typeof rows[0].data?.freePickupThreshold === 'number' ? rows[0].data.freePickupThreshold : DEFAULT_SETTINGS.freePickupThreshold,
+    };
   } catch (e) {
     console.error('Error fetching platform settings', e);
     return DEFAULT_SETTINGS;
@@ -94,6 +106,9 @@ export async function updatePlatformSettings(data: Partial<PlatformSettings>): P
     payments: { ...current.payments, ...(data.payments ?? {}) },
     features: { ...current.features, ...(data.features ?? {}) },
     deliveryFees: { ...current.deliveryFees, ...(data.deliveryFees ?? {}) },
+    pickupStations: data.pickupStations ?? current.pickupStations,
+    pickupFee: typeof data.pickupFee === 'number' ? data.pickupFee : current.pickupFee,
+    freePickupThreshold: typeof data.freePickupThreshold === 'number' ? data.freePickupThreshold : current.freePickupThreshold,
   };
 
   await sql`

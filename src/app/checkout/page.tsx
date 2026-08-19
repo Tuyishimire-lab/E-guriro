@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   formatRWF, getShippingFee, RWANDA_DISTRICTS,
   PICKUP_STATIONS, getPickupFee, FREE_PICKUP_THRESHOLD,
+  type PickupStation,
 } from '@/lib/constants';
 import {
   UilCheck, UilMobileAndroid, UilCreditCard, UilArrowRight,
@@ -26,6 +27,9 @@ function CheckoutContent() {
 
   const [step, setStep] = useState<CheckoutStep>('details');
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('home_delivery');
+  const [stations, setStations] = useState<PickupStation[]>(PICKUP_STATIONS);
+  const [livePickupFee, setLivePickupFee] = useState<number>(1000);
+  const [liveFreeThreshold, setLiveFreeThreshold] = useState<number>(50000);
   const [selectedStationId, setSelectedStationId] = useState<string>(PICKUP_STATIONS[0].id);
 
   const [district, setDistrict] = useState(searchParams.get('district') || 'Gasabo');
@@ -39,11 +43,26 @@ function CheckoutContent() {
   const [createdOrderId, setCreatedOrderId] = useState('');
   const [createdPickupCode, setCreatedPickupCode] = useState('');
 
-  const selectedStation = PICKUP_STATIONS.find(s => s.id === selectedStationId) || PICKUP_STATIONS[0];
+  // Fetch live settings from database
+  useState(() => {
+    fetch('/api/admin/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data) return;
+        if (Array.isArray(data.pickupStations) && data.pickupStations.length > 0) {
+          setStations(data.pickupStations);
+        }
+        if (typeof data.pickupFee === 'number') setLivePickupFee(data.pickupFee);
+        if (typeof data.freePickupThreshold === 'number') setLiveFreeThreshold(data.freePickupThreshold);
+      })
+      .catch(() => {});
+  });
+
+  const selectedStation = stations.find(s => s.id === selectedStationId) || stations[0] || PICKUP_STATIONS[0];
 
   // Delivery fee calculation
   const shipping = deliveryType === 'pickup_station'
-    ? getPickupFee(totalPrice)
+    ? (totalPrice >= liveFreeThreshold ? 0 : livePickupFee)
     : getShippingFee(district);
 
   const total = totalPrice + shipping;
@@ -290,12 +309,12 @@ function CheckoutContent() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                         <label className="input-label" style={{ marginBottom: 0 }}>Select Kigali Pickup Station</label>
                         <span style={{ fontSize: '0.78rem', color: 'var(--brand-green)', fontWeight: 700 }}>
-                          {totalPrice >= FREE_PICKUP_THRESHOLD ? 'FREE Pickup Applied' : 'RWF 1,000 Flat Fee'}
+                          {totalPrice >= liveFreeThreshold ? 'FREE Pickup Applied' : `RWF ${livePickupFee.toLocaleString()} Flat Fee`}
                         </span>
                       </div>
 
                       <div className={styles.stationGrid}>
-                        {PICKUP_STATIONS.map(st => (
+                        {stations.map(st => (
                           <div
                             key={st.id}
                             className={`${styles.stationCard} ${selectedStationId === st.id ? styles.stationCardActive : ''}`}
