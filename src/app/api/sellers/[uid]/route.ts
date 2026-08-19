@@ -29,7 +29,7 @@ export async function PATCH(
 ) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'admin') {
+    if (session && session.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -38,7 +38,7 @@ export async function PATCH(
 
     const user = await getUserById(uid);
 
-    if (action === 'approve') {
+    if (action === 'approve' || action === 'restore' || action === 'activate') {
       await approveSeller(uid);
       if (user) {
         sendSellerApproved({

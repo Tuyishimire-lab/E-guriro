@@ -39,7 +39,7 @@ export default function AdminUsers() {
   const applyAction = async () => {
     if (!confirmAction) return;
     const action = confirmAction.action === 'ban' ? 'suspend' : 'restore';
-    const res = await fetch(`/api/sellers/${confirmAction.uid}`, {
+    const res = await fetch(`/api/users/${confirmAction.uid}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action }),
