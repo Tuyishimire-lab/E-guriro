@@ -15,7 +15,7 @@ function toProduct(row: any): Product {
     image:         row.image ?? '',
     images:        row.images ?? [],
     rating:        parseFloat(row.rating) || 0,
-    reviews:       row.reviews_count ?? 0,
+    reviews:       row.reviews ?? row.reviews_count ?? 0,
     seller:        row.seller_name ?? '',
     sellerId:      row.seller_id ?? '',
     category:      row.category ?? '',

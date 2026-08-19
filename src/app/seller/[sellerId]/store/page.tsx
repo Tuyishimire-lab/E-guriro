@@ -102,13 +102,16 @@ export default function SellerStorePage() {
       }
     });
 
-  const avgRating = allProducts.length
-    ? allProducts.reduce((s, p) => s + p.rating, 0) / allProducts.length
-    : (seller.rating || 4.8);
+  const ratedProducts = allProducts.filter(p => p.rating && p.rating > 0);
+  const avgRating = ratedProducts.length
+    ? (ratedProducts.reduce((s, p) => s + p.rating, 0) / ratedProducts.length)
+    : (seller.rating && seller.rating > 0 ? seller.rating : 4.8);
 
   const minPrice = allProducts.length
     ? Math.min(...allProducts.map(p => p.price))
     : 0;
+
+  const totalReviews = allProducts.reduce((s, p) => s + (p.reviews ?? 0), 0);
 
   const categoryLabel = (id: string) =>
     PRODUCT_CATEGORIES.find(c => c.id === id)?.label ?? id;
@@ -175,7 +178,7 @@ export default function SellerStorePage() {
         </div>
         <div className={styles.kpiDivider} />
         <div className={styles.kpi}>
-          <strong>{allProducts.reduce((s, p) => s + (p.reviews ?? 0), 0).toLocaleString()}</strong>
+          <strong>{totalReviews.toLocaleString()}</strong>
           <span>Total Reviews</span>
         </div>
       </div>
