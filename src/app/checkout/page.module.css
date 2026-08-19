@@ -216,8 +216,197 @@
 .summaryTotal { font-weight: 800; color: var(--text-primary); font-size: 1rem; }
 
 @media (max-width: 768px) {
- .layout { grid-template-columns: 1fr; }
- .summaryPanel { position: static; order: -1; }
- .formGrid { grid-template-columns: 1fr; }
- .btnRow { flex-direction: column; }
+  .layout { grid-template-columns: 1fr; }
+  .summaryPanel { position: static; order: -1; }
+  .formGrid { grid-template-columns: 1fr; }
+  .btnRow { flex-direction: column; }
 }
+
+/* ── Delivery Mode Switcher ─────────────────────────────────────── */
+.deliveryModeToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: var(--space-lg);
+}
+
+.modeBtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-base);
+  color: var(--text-primary);
+}
+
+.modeBtn:hover {
+  border-color: var(--brand-green);
+  background: rgba(0, 165, 80, 0.04);
+}
+
+.modeBtnActive {
+  border-color: var(--brand-green) !important;
+  background: rgba(0, 165, 80, 0.1) !important;
+  box-shadow: 0 0 0 1px var(--brand-green);
+}
+
+.modeIcon {
+  font-size: 1.5rem;
+  color: var(--brand-green);
+  flex-shrink: 0;
+}
+
+.modeTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: block;
+}
+
+.modeSub {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+/* ── Pickup Stations Grid ────────────────────────────────────────── */
+.stationGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: var(--space-sm);
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.stationCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-input);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.stationCard:hover {
+  border-color: var(--brand-green);
+}
+
+.stationCardActive {
+  border-color: var(--brand-green) !important;
+  background: rgba(0, 165, 80, 0.08) !important;
+}
+
+.stationInfo {
+  flex: 1;
+}
+
+.stationHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.stationName {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.stationDistrictBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+.popularBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.stationLandmark {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stationMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.stationFeeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  color: var(--brand-green);
+  font-size: 0.78rem;
+}
+
+/* ── Digital Pickup Pass (Success Screen) ────────────────────────── */
+.pickupPassCard {
+  width: 100%;
+  max-width: 440px;
+  background: linear-gradient(135deg, rgba(0, 165, 80, 0.12), rgba(6, 182, 212, 0.08));
+  border: 2px dashed var(--brand-green);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  text-align: center;
+  margin: var(--space-md) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pickupPassHeader {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--brand-green);
+}
+
+.pickupPinBox {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 24px;
+  font-family: monospace;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: var(--brand-green);
+  box-shadow: 0 4px 16px rgba(0, 165, 80, 0.15);
+}
+
+.pickupPassNote {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+

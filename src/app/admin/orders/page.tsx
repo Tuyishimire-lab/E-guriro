@@ -5,9 +5,16 @@ import { UilSearch, UilCheck, UilTimes, UilRefresh } from '@/components/Icons';
 import styles from '../layout.module.css';
 
 interface Order {
-  id: string; buyerName: string; sellerName?: string;
+  id: string;
+  buyerName: string;
+  sellerName?: string;
   items: { title: string }[];
-  total: number; status: string; createdAt: string;
+  total: number;
+  status: string;
+  createdAt: string;
+  deliveryType?: 'home_delivery' | 'pickup_station';
+  pickupStationName?: string;
+  district?: string;
 }
 
 const ALL_STATUSES = ['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -114,6 +121,15 @@ export default function AdminOrders() {
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
                       {new Date(o.createdAt).toLocaleDateString()}
                     </div>
+                    {o.deliveryType === 'pickup_station' ? (
+                      <span className="badge badge-green" style={{ fontSize: '0.62rem', padding: '1px 5px', marginTop: 3 }}>
+                        📍 {o.pickupStationName ? o.pickupStationName.split('(')[0] : 'Pickup Hub'}
+                      </span>
+                    ) : (
+                      <span className="badge badge-blue" style={{ fontSize: '0.62rem', padding: '1px 5px', marginTop: 3 }}>
+                        🚚 {o.district || 'Home Delivery'}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <div className={styles.tdPrimary} style={{ fontSize: '0.85rem' }}>{o.buyerName}</div>

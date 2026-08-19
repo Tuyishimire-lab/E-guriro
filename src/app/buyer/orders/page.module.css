@@ -132,6 +132,83 @@
   padding: var(--space-xl) var(--space-xl) var(--space-2xl);
 }
 
+.profileFormBody {
+  padding: var(--space-xl) var(--space-2xl) var(--space-2xl);
+}
+
+/* ── Pickup Station Card Enhancements ───────────────────────────── */
+.pickupPassBanner {
+  background: linear-gradient(135deg, rgba(0, 165, 80, 0.08), rgba(6, 182, 212, 0.06));
+  border: 1px dashed var(--brand-green);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pickupPassLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pickupPassIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(0, 165, 80, 0.15);
+  color: var(--brand-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pickupStationTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+}
+
+.pickupStationSub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.pickupCodeBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.pickupCodeLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pickupCodeValue {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: 2px;
+  color: var(--brand-green);
+}
+
 .orderCardFooter {
   display: flex;
   justify-content: flex-end;

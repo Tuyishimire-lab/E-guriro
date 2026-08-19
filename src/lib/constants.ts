@@ -40,6 +40,95 @@ export function getDeliveryFee(district: string): number {
 }
 export const getShippingFee = getDeliveryFee;
 
+// ─── Kigali Pickup Stations (Click & Collect) ──────────────────────────────
+export interface PickupStation {
+  id: string;
+  name: string;
+  district: string;
+  landmark: string;
+  address: string;
+  hours: string;
+  phone: string;
+  popular?: boolean;
+}
+
+export const PICKUP_STATIONS: PickupStation[] = [
+  {
+    id: 'ps-chic',
+    name: 'CHIC Building Hub (Downtown)',
+    district: 'Nyarugenge',
+    landmark: 'Ground Floor, Shop G-14 (Near Bank of Kigali)',
+    address: 'KN 2 Ave, Kigali Downtown',
+    hours: 'Mon – Sat: 8:00 AM – 8:00 PM',
+    phone: '+250 788 123 001',
+    popular: true,
+  },
+  {
+    id: 'ps-kct',
+    name: 'Kigali City Tower (KCT)',
+    district: 'Nyarugenge',
+    landmark: 'Mezzanine Floor, Hub M-02',
+    address: 'KN 81 St, Kigali City Centre',
+    hours: 'Mon – Sat: 8:00 AM – 8:00 PM',
+    phone: '+250 788 123 002',
+    popular: true,
+  },
+  {
+    id: 'ps-remera',
+    name: 'Remera Corner / Giporoso',
+    district: 'Gasabo',
+    landmark: 'Opposite Amahoro National Stadium Gate 2',
+    address: 'KG 11 Ave, Remera',
+    hours: 'Mon – Sat: 8:00 AM – 9:00 PM',
+    phone: '+250 788 123 004',
+    popular: true,
+  },
+  {
+    id: 'ps-kimironko',
+    name: 'Kimironko Market Plaza',
+    district: 'Gasabo',
+    landmark: '1st Floor Shop K-08 (Near Taxi Park Entrance)',
+    address: 'KG 13 Ave, Kimironko',
+    hours: 'Mon – Sat: 8:00 AM – 8:30 PM',
+    phone: '+250 788 123 005',
+    popular: true,
+  },
+  {
+    id: 'ps-utc',
+    name: 'UTC (Union Trade Centre)',
+    district: 'Nyarugenge',
+    landmark: 'Central Ground Hub, Opposite Simba Supermarket',
+    address: 'KN 4 Ave, Nyarugenge',
+    hours: 'Mon – Sat: 8:30 AM – 7:30 PM',
+    phone: '+250 788 123 003',
+  },
+  {
+    id: 'ps-kicukiro',
+    name: 'Kicukiro Centre (Sonatubes Hub)',
+    district: 'Kicukiro',
+    landmark: 'Near Sonatubes Roundabout Commercial Complex',
+    address: 'KK 15 Rd, Kicukiro',
+    hours: 'Mon – Sat: 8:30 AM – 7:30 PM',
+    phone: '+250 788 123 006',
+  },
+  {
+    id: 'ps-nyamirambo',
+    name: 'Nyamirambo Commercial Hub',
+    district: 'Nyarugenge',
+    landmark: 'Near Biryogo Green Mosque & Car-Free Zone',
+    address: 'KN 134 St, Nyamirambo',
+    hours: 'Mon – Sun: 8:00 AM – 9:00 PM',
+    phone: '+250 788 123 007',
+  },
+];
+
+export const PICKUP_FEE = 1000;
+export const FREE_PICKUP_THRESHOLD = 50000;
+
+export function getPickupFee(subtotal: number): number {
+  return subtotal >= FREE_PICKUP_THRESHOLD ? 0 : PICKUP_FEE;
+}
+
 // Format currency in RWF
 export function formatRWF(amount: number): string {
   return `RWF ${amount.toLocaleString('en-RW')}`;

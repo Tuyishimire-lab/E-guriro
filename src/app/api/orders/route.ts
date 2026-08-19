@@ -29,19 +29,27 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const data = await req.json();
-    const orderId = await createOrder({ ...data, buyerId: session.uid, buyerName: session.name });
+    const buyerId = session?.uid || data.buyerId || `guest-${Date.now().toString(36)}`;
+    const buyerName = session?.name || data.buyerName || data.fullName || 'Shopper';
+    const buyerEmail = session?.email || data.email || '';
+
+    const orderId = await createOrder({
+      ...data,
+      buyerId,
+      buyerName,
+    });
 
     // Send confirmation email to buyer (non-blocking)
-    sendOrderConfirmation({
-      buyerEmail: session.email,
-      buyerName:  session.name,
-      orderId,
-      items:      data.items ?? [],
-      total:      data.total ?? 0,
-    }).catch(console.error);
+    if (buyerEmail) {
+      sendOrderConfirmation({
+        buyerEmail,
+        buyerName,
+        orderId,
+        items:      data.items ?? [],
+        total:      data.total ?? 0,
+      }).catch(console.error);
+    }
 
     // Notify each seller (non-blocking)
     const sellerIds: string[] = [...new Set<string>((data.items ?? []).map((i: { sellerId: string }) => i.sellerId).filter((x: unknown): x is string => typeof x === 'string' && Boolean(x)))];
@@ -52,13 +60,13 @@ export async function POST(req: NextRequest) {
           sellerEmail: sellerRows[0].email as string,
           sellerName:  sellerRows[0].name as string,
           orderId,
-          buyerName:   session.name as string,
+          buyerName,
           items:       (data.items ?? []).filter((i: { sellerId: string }) => i.sellerId === sellerId),
         }).catch(console.error);
       }
     }
 
-    return NextResponse.json({ orderId }, { status: 201 });
+    return NextResponse.json({ orderId, success: true }, { status: 201 });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

@@ -1,25 +1,33 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { formatRWF, getShippingFee, RWANDA_DISTRICTS } from '@/lib/constants';
+import {
+  formatRWF, getShippingFee, RWANDA_DISTRICTS,
+  PICKUP_STATIONS, getPickupFee, FREE_PICKUP_THRESHOLD,
+} from '@/lib/constants';
 import {
   UilCheck, UilMobileAndroid, UilCreditCard, UilArrowRight,
-  UilArrowLeft, UilMapMarker, UilUser, UilPhone, UilShoppingCart,
+  UilArrowLeft, UilMapMarker, UilPhone, UilShoppingCart,
+  UilTruck, UilStore, UilClock,
 } from '@/components/Icons';
 import styles from './page.module.css';
 
 type PaymentMethod = 'mtn_momo' | 'airtel_money' | 'card';
 type CheckoutStep = 'details' | 'payment' | 'confirm' | 'success';
+type DeliveryType = 'home_delivery' | 'pickup_station';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const { items, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const [step, setStep] = useState<CheckoutStep>('details');
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>('home_delivery');
+  const [selectedStationId, setSelectedStationId] = useState<string>(PICKUP_STATIONS[0].id);
+
   const [district, setDistrict] = useState(searchParams.get('district') || 'Gasabo');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -28,17 +36,80 @@ export default function CheckoutPage() {
   const [momoPhone, setMomoPhone] = useState('');
   const [cardNum, setCardNum] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [orderId] = useState(`EG-${Date.now().toString().slice(-6)}`);
+  const [createdOrderId, setCreatedOrderId] = useState('');
+  const [createdPickupCode, setCreatedPickupCode] = useState('');
 
-  const shipping = getShippingFee(district);
+  const selectedStation = PICKUP_STATIONS.find(s => s.id === selectedStationId) || PICKUP_STATIONS[0];
+
+  // Delivery fee calculation
+  const shipping = deliveryType === 'pickup_station'
+    ? getPickupFee(totalPrice)
+    : getShippingFee(district);
+
   const total = totalPrice + shipping;
 
   const handlePayment = async () => {
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 3000));
-    setProcessing(false);
-    clearCart();
-    setStep('success');
+    try {
+      const generatedPin = `RB-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      const orderPayload = {
+        buyerId: user?.uid || `guest-${Date.now().toString(36)}`,
+        buyerName: fullName.trim() || 'Shopper',
+        email: user?.email || '',
+        items: items.map(i => ({
+          productId: i.id,
+          title: i.title,
+          price: i.price,
+          qty: i.quantity,
+          image: i.image,
+          seller: i.seller,
+          sellerId: i.sellerId || 'seller1',
+        })),
+        total,
+        shipping,
+        address: {
+          id: 'addr-checkout',
+          label: deliveryType === 'pickup_station' ? selectedStation.name : 'Delivery Address',
+          district: deliveryType === 'pickup_station' ? selectedStation.district : district,
+          street: deliveryType === 'pickup_station' ? selectedStation.address : address,
+          isDefault: true,
+        },
+        district: deliveryType === 'pickup_station' ? selectedStation.district : district,
+        phone,
+        paymentMethod,
+        deliveryType,
+        pickupStationId: deliveryType === 'pickup_station' ? selectedStation.id : undefined,
+        pickupStationName: deliveryType === 'pickup_station' ? selectedStation.name : undefined,
+        pickupStationAddress: deliveryType === 'pickup_station' ? selectedStation.address : undefined,
+        pickupCode: deliveryType === 'pickup_station' ? generatedPin : undefined,
+      };
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      });
+
+      let assignedId = `EG-${Date.now().toString().slice(-6)}`;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.orderId) assignedId = data.orderId;
+      }
+
+      setCreatedOrderId(assignedId);
+      setCreatedPickupCode(generatedPin);
+      clearCart();
+      setStep('success');
+    } catch (err) {
+      console.error('Order checkout error', err);
+      // Fallback
+      setCreatedOrderId(`EG-${Date.now().toString().slice(-6)}`);
+      clearCart();
+      setStep('success');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (items.length === 0 && step !== 'success') {
@@ -92,18 +163,51 @@ export default function CheckoutPage() {
         })}
       </div>
 
-      {/* Success */}
+      {/* Success View */}
       {step === 'success' && (
         <div className={styles.success}>
           <div className={styles.successIconWrap}>
             <UilCheck size="56" className={styles.successCheckIcon} />
           </div>
           <h2 className={styles.successTitle}>Order Placed Successfully!</h2>
-          <p className={styles.successSub}>Order ID: <strong>{orderId}</strong></p>
-          <p className={styles.successDesc}>
-            Your order has been confirmed. You will receive an SMS to <strong>{phone}</strong> with tracking updates.
-            Estimated delivery: 2-5 business days to {district}.
-          </p>
+          <p className={styles.successSub}>Order ID: <strong>{createdOrderId}</strong></p>
+
+          {deliveryType === 'pickup_station' ? (
+            <>
+              {/* Digital Pickup Pass */}
+              <div className={styles.pickupPassCard}>
+                <span className={styles.pickupPassHeader}>📍 Kigali Click & Collect Pickup Pass</span>
+                <div className={styles.pickupPinBox}>{createdPickupCode}</div>
+                <div style={{ textAlign: 'left', width: '100%', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Station:</span>
+                    <strong>{selectedStation.name}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Address:</span>
+                    <span>{selectedStation.address}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Landmark:</span>
+                    <span>{selectedStation.landmark}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Hours:</span>
+                    <span>{selectedStation.hours}</span>
+                  </div>
+                </div>
+                <p className={styles.pickupPassNote}>
+                  Present this 6-digit PIN at the counter to collect your gadgets. You will also receive an SMS confirmation to <strong>{phone}</strong>.
+                </p>
+              </div>
+            </>
+          ) : (
+            <p className={styles.successDesc}>
+              Your order has been confirmed. You will receive an SMS to <strong>{phone}</strong> with live tracking updates.
+              Estimated delivery: 2-5 business days to {district}.
+            </p>
+          )}
+
           <div className={styles.successActions}>
             <button className="btn btn-primary btn-lg" onClick={() => router.push('/buyer/orders')} id="view-orders-btn">
               Track My Order
@@ -124,34 +228,106 @@ export default function CheckoutPage() {
               <div className={styles.panel}>
                 <h2 className={styles.panelTitle}>
                   <UilMapMarker size="22" style={{ color: 'var(--brand-green)' }} />
-                  Delivery Details
+                  Delivery & Contact Information
                 </h2>
+
+                {/* Delivery Mode Toggle */}
+                <div className={styles.deliveryModeToggle}>
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${deliveryType === 'home_delivery' ? styles.modeBtnActive : ''}`}
+                    onClick={() => setDeliveryType('home_delivery')}
+                  >
+                    <span className={styles.modeIcon}><UilTruck size="22" /></span>
+                    <div>
+                      <span className={styles.modeTitle}>Doorstep Delivery</span>
+                      <span className={styles.modeSub}>Delivered to home or office in Rwanda</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.modeBtn} ${deliveryType === 'pickup_station' ? styles.modeBtnActive : ''}`}
+                    onClick={() => setDeliveryType('pickup_station')}
+                  >
+                    <span className={styles.modeIcon}><UilStore size="22" /></span>
+                    <div>
+                      <span className={styles.modeTitle}>Kigali Pickup Station</span>
+                      <span className={styles.modeSub}>Click & Collect (RWF 1,000 or FREE)</span>
+                    </div>
+                  </button>
+                </div>
+
                 <div className={styles.formGrid}>
                   <div className="input-group">
                     <label className="input-label" htmlFor="full-name">Full Name</label>
                     <input id="full-name" className="input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name" />
                   </div>
                   <div className="input-group">
-                    <label className="input-label" htmlFor="phone-num">Phone Number</label>
+                    <label className="input-label" htmlFor="phone-num">Phone Number (for SMS Alerts)</label>
                     <input id="phone-num" className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="0788 000 000" />
                   </div>
-                  <div className="input-group" style={{ gridColumn: '1/-1' }}>
-                    <label className="input-label" htmlFor="district-sel">District</label>
-                    <select id="district-sel" className="select" value={district} onChange={e => setDistrict(e.target.value)}>
-                      {Object.entries(RWANDA_DISTRICTS).map(([province, districts]) => (
-                        <optgroup key={province} label={province}>
-                          {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="input-group" style={{ gridColumn: '1/-1' }}>
-                    <label className="input-label" htmlFor="address">Street / Sector / Village</label>
-                    <input id="address" className="input" value={address} onChange={e => setAddress(e.target.value)} placeholder="e.g. KN 5 Ave, Remera Sector" />
-                  </div>
+
+                  {deliveryType === 'home_delivery' ? (
+                    <>
+                      <div className="input-group" style={{ gridColumn: '1/-1' }}>
+                        <label className="input-label" htmlFor="district-sel">District</label>
+                        <select id="district-sel" className="select" value={district} onChange={e => setDistrict(e.target.value)}>
+                          {Object.entries(RWANDA_DISTRICTS).map(([province, districts]) => (
+                            <optgroup key={province} label={province}>
+                              {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="input-group" style={{ gridColumn: '1/-1' }}>
+                        <label className="input-label" htmlFor="address">Street / Sector / Village</label>
+                        <input id="address" className="input" value={address} onChange={e => setAddress(e.target.value)} placeholder="e.g. KN 5 Ave, Remera Sector" />
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <label className="input-label" style={{ marginBottom: 0 }}>Select Kigali Pickup Station</label>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--brand-green)', fontWeight: 700 }}>
+                          {totalPrice >= FREE_PICKUP_THRESHOLD ? 'FREE Pickup Applied' : 'RWF 1,000 Flat Fee'}
+                        </span>
+                      </div>
+
+                      <div className={styles.stationGrid}>
+                        {PICKUP_STATIONS.map(st => (
+                          <div
+                            key={st.id}
+                            className={`${styles.stationCard} ${selectedStationId === st.id ? styles.stationCardActive : ''}`}
+                            onClick={() => setSelectedStationId(st.id)}
+                          >
+                            <div className={`${styles.payRadio} ${selectedStationId === st.id ? styles.payRadioActive : ''}`} style={{ marginTop: 2 }} />
+                            <div className={styles.stationInfo}>
+                              <div className={styles.stationHeader}>
+                                <span className={styles.stationName}>{st.name}</span>
+                                <span className={styles.stationDistrictBadge}>{st.district}</span>
+                                {st.popular && <span className={styles.popularBadge}>Popular Hub</span>}
+                              </div>
+                              <p className={styles.stationLandmark}>📍 {st.landmark} ({st.address})</p>
+                              <div className={styles.stationMetaRow}>
+                                <span><UilClock size="13" /> {st.hours}</span>
+                                <span><UilPhone size="13" /> {st.phone}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button className="btn btn-primary btn-lg" onClick={() => setStep('payment')} id="to-payment-btn" disabled={!fullName || !phone}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+                <button
+                  className="btn btn-primary btn-lg"
+                  onClick={() => setStep('payment')}
+                  id="to-payment-btn"
+                  disabled={!fullName.trim() || !phone.trim() || (deliveryType === 'home_delivery' && !address.trim())}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}
+                >
                   Continue to Payment <UilArrowRight size="18" />
                 </button>
               </div>
@@ -196,8 +372,13 @@ export default function CheckoutPage() {
                       <label className="input-label" htmlFor="momo-phone">
                         {paymentMethod === 'mtn_momo' ? 'MTN' : 'Airtel'} Phone Number
                       </label>
-                      <input id="momo-phone" className="input" value={momoPhone} onChange={e => setMomoPhone(e.target.value)}
-                        placeholder={paymentMethod === 'mtn_momo' ? '078X XXX XXX' : '073X XXX XXX'} />
+                      <input
+                        id="momo-phone"
+                        className="input"
+                        value={momoPhone || phone}
+                        onChange={e => setMomoPhone(e.target.value)}
+                        placeholder={paymentMethod === 'mtn_momo' ? '078X XXX XXX' : '073X XXX XXX'}
+                      />
                     </div>
                     <p className={styles.momoNote}>
                       Dial {paymentMethod === 'mtn_momo' ? '*182#' : '*185#'} to check your balance first
@@ -248,7 +429,16 @@ export default function CheckoutPage() {
                 <div className={styles.confirmDetails}>
                   <div className={styles.confirmRow}><span>Name</span><strong>{fullName}</strong></div>
                   <div className={styles.confirmRow}><span>Phone</span><strong>{phone}</strong></div>
-                  <div className={styles.confirmRow}><span>District</span><strong>{district}</strong></div>
+                  <div className={styles.confirmRow}>
+                    <span>Fulfillment</span>
+                    <strong>{deliveryType === 'pickup_station' ? `Pickup: ${selectedStation.name}` : `Delivery: ${district}`}</strong>
+                  </div>
+                  {deliveryType === 'pickup_station' && (
+                    <div className={styles.confirmRow}>
+                      <span>Hub Address</span>
+                      <span style={{ fontSize: '0.82rem', textAlign: 'right' }}>{selectedStation.landmark}</span>
+                    </div>
+                  )}
                   <div className={styles.confirmRow}>
                     <span>Payment</span>
                     <strong style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -266,7 +456,7 @@ export default function CheckoutPage() {
                 {processing && (
                   <div className={styles.processing}>
                     <div className={styles.spinner} />
-                    <p>Processing your payment...</p>
+                    <p>Processing your payment & creating order...</p>
                     {paymentMethod !== 'card' && (
                       <p className={styles.processingNote}>Check your phone for the USSD prompt and confirm the payment</p>
                     )}
@@ -312,13 +502,30 @@ export default function CheckoutPage() {
             </div>
             <hr className="divider" />
             <div className={styles.summaryLines}>
-              <div className={styles.summaryLine}><span>Subtotal</span><span>{formatRWF(totalPrice)}</span></div>
-              <div className={styles.summaryLine}><span>Delivery ({district})</span><span>{formatRWF(shipping)}</span></div>
-              <div className={`${styles.summaryLine} ${styles.summaryTotal}`}><span>Total</span><span>{formatRWF(total)}</span></div>
+              <div className={styles.summaryLine}>
+                <span>Subtotal</span>
+                <span>{formatRWF(totalPrice)}</span>
+              </div>
+              <div className={styles.summaryLine}>
+                <span>{deliveryType === 'pickup_station' ? 'Station Pickup Fee' : `Delivery (${district})`}</span>
+                <span>{shipping === 0 ? <span style={{ color: 'var(--brand-green)', fontWeight: 700 }}>FREE</span> : formatRWF(shipping)}</span>
+              </div>
+              <div className={`${styles.summaryLine} ${styles.summaryTotal}`}>
+                <span>Total</span>
+                <span>{formatRWF(total)}</span>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="container" style={{ padding: 64, textAlign: 'center', color: 'var(--text-muted)' }}>Loading checkout...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

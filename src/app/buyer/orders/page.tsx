@@ -6,7 +6,7 @@ import { formatRWF, RWANDA_DISTRICTS } from '@/lib/constants';
 import {
   UilPackage, UilUser, UilShoppingCart, UilCheck,
   UilComment, UilRefresh, UilEnvelope, UilPhone, UilMapMarker,
-  UilStar, UilShieldCheck, UilArrowRight,
+  UilStar, UilShieldCheck, UilArrowRight, UilStore,
 } from '@/components/Icons';
 import styles from './page.module.css';
 
@@ -22,17 +22,24 @@ const STATUS_BADGE: Record<string, string> = {
   shipped: 'badge-green', delivered: 'badge-green', cancelled: 'badge-red',
 };
 
-function OrderTracker({ status }: { status: string }) {
-  const current = STATUS_STEPS.indexOf(status);
+function OrderTracker({ status, isPickup }: { status: string; isPickup?: boolean }) {
+  const steps = isPickup
+    ? ['pending', 'processing', 'shipped', 'delivered']
+    : STATUS_STEPS;
+  const labels: Record<string, string> = isPickup
+    ? { pending: 'Order Placed', processing: 'Processing', shipped: 'Ready for Pickup', delivered: 'Collected' }
+    : STEP_LABELS;
+
+  const current = steps.indexOf(status);
   return (
     <div className={styles.tracker}>
-      {STATUS_STEPS.map((s, i) => (
+      {steps.map((s, i) => (
         <div key={s} className={styles.trackerStep}>
           <div className={`${styles.trackerDot} ${i <= current ? styles.trackerDotActive : ''}`}>
             {i < current ? <UilCheck size="14" /> : null}
           </div>
-          <span className={`${styles.trackerLabel} ${i === current ? styles.trackerLabelActive : ''}`}>{STEP_LABELS[s] || s}</span>
-          {i < STATUS_STEPS.length - 1 && (
+          <span className={`${styles.trackerLabel} ${i === current ? styles.trackerLabelActive : ''}`}>{labels[s] || s}</span>
+          {i < steps.length - 1 && (
             <div className={`${styles.trackerLine} ${i < current ? styles.trackerLineActive : ''}`} />
           )}
         </div>
@@ -42,8 +49,17 @@ function OrderTracker({ status }: { status: string }) {
 }
 
 interface Order {
-  id: string; items: { title: string; image?: string; qty: number; price: number }[];
-  sellerName?: string; total: number; status: string; createdAt: string;
+  id: string;
+  items: { title: string; image?: string; qty: number; price: number }[];
+  sellerName?: string;
+  total: number;
+  status: string;
+  createdAt: string;
+  deliveryType?: 'home_delivery' | 'pickup_station';
+  pickupStationId?: string;
+  pickupStationName?: string;
+  pickupStationAddress?: string;
+  pickupCode?: string;
 }
 
 export default function BuyerOrders() {
@@ -173,14 +189,40 @@ export default function BuyerOrders() {
                             {order.sellerName || 'Verified Seller'} &nbsp;·&nbsp; {new Date(order.createdAt).toLocaleDateString()}
                           </p>
                           <span className={`badge ${STATUS_BADGE[order.status] || 'badge-blue'}`}>
-                            {STEP_LABELS[order.status] || order.status}
+                            {order.deliveryType === 'pickup_station' && order.status === 'shipped'
+                              ? 'Ready for Pickup'
+                              : STEP_LABELS[order.status] || order.status}
                           </span>
+                          {order.deliveryType === 'pickup_station' && (
+                            <span className="badge badge-green" style={{ marginLeft: 6 }}>
+                              📍 Pickup Hub
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className={styles.orderAmount}>{formatRWF(order.total)}</div>
                     </div>
+
                     <div className={styles.orderCardBody}>
-                      <OrderTracker status={order.status} />
+                      {order.deliveryType === 'pickup_station' && (
+                        <div className={styles.pickupPassBanner}>
+                          <div className={styles.pickupPassLeft}>
+                            <div className={styles.pickupPassIcon}>
+                              <UilStore size="24" />
+                            </div>
+                            <div>
+                              <h4 className={styles.pickupStationTitle}>📍 {order.pickupStationName || 'Kigali Pickup Station'}</h4>
+                              <p className={styles.pickupStationSub}>{order.pickupStationAddress || 'Central Kigali Hub'}</p>
+                            </div>
+                          </div>
+                          <div className={styles.pickupCodeBox}>
+                            <span className={styles.pickupCodeLabel}>Pickup PIN</span>
+                            <span className={styles.pickupCodeValue}>{order.pickupCode || 'RB-READY'}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <OrderTracker status={order.status} isPickup={order.deliveryType === 'pickup_station'} />
                     </div>
                     <div className={styles.orderCardFooter}>
                       <Link href="/chat" className="btn btn-ghost btn-sm" id={`chat-seller-${order.id}`}

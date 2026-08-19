@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Centralized TypeScript interfaces for RwandaBuy.
  * These map 1:1 to future Firestore document shapes.
  * When Firebase is integrated, replace the service layer bodies —
@@ -103,6 +103,11 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   updatedAt?: string;
+  deliveryType?: 'home_delivery' | 'pickup_station';
+  pickupStationId?: string;
+  pickupStationName?: string;
+  pickupStationAddress?: string;
+  pickupCode?: string;
 }
 
 export interface Review {
