@@ -65,9 +65,36 @@
  gap: var(--space-lg);
 }
 
-.panelTitle { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  align-items: start;
+}
 
-.formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+.formGrid :global(.input-group) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  margin-bottom: 0;
+}
+
+.formGrid :global(.input-label) {
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  min-height: 18px;
+  line-height: 18px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.formGrid :global(.input),
+.formGrid :global(.select) {
+  height: 44px;
+  box-sizing: border-box;
+}
 
 /* Payment Options */
 .paymentOptions { display: flex; flex-direction: column; gap: 10px; }

@@ -283,7 +283,7 @@ function CheckoutContent() {
                     <input id="full-name" className="input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name" />
                   </div>
                   <div className="input-group">
-                    <label className="input-label" htmlFor="phone-num">Phone Number (for SMS Alerts)</label>
+                    <label className="input-label" htmlFor="phone-num">Phone Number</label>
                     <input id="phone-num" className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="0788 000 000" />
                   </div>
 
