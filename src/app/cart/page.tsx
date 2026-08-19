@@ -92,7 +92,7 @@ export default function CartPage() {
             <div className={styles.summaryLine}>
               <span>
                 <UilTruck size="14" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                Shipping to {district}
+                Delivery to {district}
               </span>
               <span className={shipping === 0 ? styles.free : ''}>{shipping === 0 ? 'FREE' : formatRWF(shipping)}</span>
             </div>

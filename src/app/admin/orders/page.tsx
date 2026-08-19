@@ -16,7 +16,7 @@ const STATUS_BADGE: Record<string, string> = {
   shipped: 'badge-blue', cancelled: 'badge-red',
 };
 const NEXT_STATUS: Record<string, string> = { pending: 'processing', processing: 'shipped', shipped: 'delivered' };
-const NEXT_LABEL: Record<string, string>  = { pending: 'Processing', processing: 'Shipped', shipped: 'Delivered' };
+const NEXT_LABEL: Record<string, string>  = { pending: 'Processing', processing: 'Out for Delivery', shipped: 'Delivered' };
 
 export default function AdminOrders() {
   const [orders, setOrders]           = useState<Order[]>([]);

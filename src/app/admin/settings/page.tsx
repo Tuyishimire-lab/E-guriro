@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState } from 'react';
 import { SHIPPING_FEES } from '@/lib/constants';
 import { UilCog, UilStore, UilTruck, UilCreditCard, UilShield, UilMoneyBill, UilCheck, UilStar } from '@/components/Icons';
@@ -17,7 +17,7 @@ export default function AdminSettings() {
 
   const savePlatform = () => showToast('Platform settings saved');
   const saveCommission = () => showToast(`Commission rate set to ${commission}%`);
-  const saveShipping = () => showToast('Shipping fees updated');
+  const saveShipping = () => showToast('Delivery fees updated');
 
   return (
     <div>
@@ -82,11 +82,11 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      {/* Shipping Fees */}
+      {/* Delivery Fees */}
       <div className={styles.settingSection}>
         <div className={styles.settingSectionHeader}>
           <UilTruck size="18" style={{ color: 'var(--brand-green)' }} />
-          <span className={styles.settingSectionTitle}>Shipping Fees by Province</span>
+          <span className={styles.settingSectionTitle}>Delivery Fees by Province</span>
         </div>
         <div className={styles.settingSectionBody}>
           <div className={styles.formGrid}>
@@ -105,7 +105,7 @@ export default function AdminSettings() {
               </div>
             ))}
           </div>
-          <button className="btn btn-primary btn-sm" onClick={saveShipping}>Save Shipping Fees</button>
+          <button className="btn btn-primary btn-sm" onClick={saveShipping}>Save Delivery Fees</button>
         </div>
       </div>
 

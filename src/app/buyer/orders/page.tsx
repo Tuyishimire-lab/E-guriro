@@ -11,6 +11,12 @@ import {
 import styles from '../../seller/dashboard/page.module.css';
 
 const STATUS_STEPS = ['pending', 'processing', 'shipped', 'delivered'];
+const STEP_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  processing: 'Processing',
+  shipped: 'Out for Delivery',
+  delivered: 'Delivered',
+};
 const STATUS_BADGE: Record<string, string> = {
   pending: 'badge-gold', processing: 'badge-blue',
   shipped: 'badge-green', delivered: 'badge-green', cancelled: 'badge-red',
@@ -25,7 +31,7 @@ function OrderTracker({ status }: { status: string }) {
           <div className={`${styles.trackerDot} ${i <= current ? styles.trackerDotActive : ''}`}>
             {i < current ? <UilCheck size="14" /> : null}
           </div>
-          <span className={`${styles.trackerLabel} ${i === current ? styles.trackerLabelActive : ''}`}>{s}</span>
+          <span className={`${styles.trackerLabel} ${i === current ? styles.trackerLabelActive : ''}`}>{STEP_LABELS[s] || s}</span>
           {i < STATUS_STEPS.length - 1 && (
             <div className={`${styles.trackerLine} ${i < current ? styles.trackerLineActive : ''}`} />
           )}

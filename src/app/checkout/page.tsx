@@ -313,7 +313,7 @@ export default function CheckoutPage() {
             <hr className="divider" />
             <div className={styles.summaryLines}>
               <div className={styles.summaryLine}><span>Subtotal</span><span>{formatRWF(totalPrice)}</span></div>
-              <div className={styles.summaryLine}><span>Shipping ({district})</span><span>{formatRWF(shipping)}</span></div>
+              <div className={styles.summaryLine}><span>Delivery ({district})</span><span>{formatRWF(shipping)}</span></div>
               <div className={`${styles.summaryLine} ${styles.summaryTotal}`}><span>Total</span><span>{formatRWF(total)}</span></div>
             </div>
           </div>

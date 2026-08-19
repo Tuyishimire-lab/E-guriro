@@ -17,14 +17,15 @@ export const RWANDA_DISTRICTS: Record<string, string[]> = {
 
 export const ALL_DISTRICTS = Object.values(RWANDA_DISTRICTS).flat();
 
-// Shipping fees in RWF (electronics get higher insurance-inclusive shipping)
-export const SHIPPING_FEES: Record<string, number> = {
+// Delivery fees in RWF (nationwide delivery across all 30 Rwandan districts)
+export const DELIVERY_FEES: Record<string, number> = {
   'Kigali City': 1500,
   'Northern Province': 4000,
   'Southern Province': 4000,
   'Eastern Province': 4000,
   'Western Province': 4000,
 };
+export const SHIPPING_FEES = DELIVERY_FEES;
 
 export function getProvinceForDistrict(district: string): string {
   for (const [province, districts] of Object.entries(RWANDA_DISTRICTS)) {
@@ -33,10 +34,11 @@ export function getProvinceForDistrict(district: string): string {
   return 'Kigali City';
 }
 
-export function getShippingFee(district: string): number {
+export function getDeliveryFee(district: string): number {
   const province = getProvinceForDistrict(district);
-  return SHIPPING_FEES[province] || 4000;
+  return DELIVERY_FEES[province] || 4000;
 }
+export const getShippingFee = getDeliveryFee;
 
 // Format currency in RWF
 export function formatRWF(amount: number): string {
