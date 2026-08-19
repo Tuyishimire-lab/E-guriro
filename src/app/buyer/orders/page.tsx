@@ -30,18 +30,22 @@ function OrderTracker({ status, isPickup }: { status: string; isPickup?: boolean
     ? { pending: 'Order Placed', processing: 'Processing', shipped: 'Ready for Pickup', delivered: 'Collected' }
     : STEP_LABELS;
 
-  const current = steps.indexOf(status);
+  const current = Math.max(0, steps.indexOf(status));
+  const progressPercent = steps.length > 1 ? (current / (steps.length - 1)) * 100 : 0;
+
   return (
     <div className={styles.tracker}>
+      <div className={styles.trackerProgressTrack}>
+        <div className={styles.trackerProgressBar} style={{ width: `${progressPercent}%` }} />
+      </div>
       {steps.map((s, i) => (
-        <div key={s} className={styles.trackerStep}>
+        <div key={s} className={styles.trackerItem}>
           <div className={`${styles.trackerDot} ${i <= current ? styles.trackerDotActive : ''}`}>
-            {i < current ? <UilCheck size="14" /> : null}
+            {i < current ? <UilCheck size="14" /> : (i + 1)}
           </div>
-          <span className={`${styles.trackerLabel} ${i === current ? styles.trackerLabelActive : ''}`}>{labels[s] || s}</span>
-          {i < steps.length - 1 && (
-            <div className={`${styles.trackerLine} ${i < current ? styles.trackerLineActive : ''}`} />
-          )}
+          <span className={`${styles.trackerLabel} ${i <= current ? styles.trackerLabelActive : ''}`}>
+            {labels[s] || s}
+          </span>
         </div>
       ))}
     </div>
